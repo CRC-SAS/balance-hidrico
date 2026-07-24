@@ -1,0 +1,27 @@
+# Ejemplo de configuracion de escenario para scripts/simular.R.
+#
+# Uso: Rscript scripts/simular.R scripts/escenario_ejemplo.yml
+#
+# Las rutas de "clima" y "parametros" son relativas a la ubicacion de este
+# archivo YAML (no al directorio desde donde se ejecuta el script), asi que
+# esta configuracion funciona sin importar desde donde se invoque Rscript.
+
+# CSV de clima diario (leer_clima_csv()).
+clima: ../inst/extdata/clima_ejemplo.csv
+
+# YAML de parametros de cultivo/cultivar/estacion/suelo (leer_parametros_yaml()).
+parametros: ../inst/extdata/parametros_ejemplo.yml
+
+# Escenario puntual a simular: mismo caso que tiene fixture cruzado contra
+# el xlsx de referencia de CRC-SAS (trigo, estacion 87480, siembra 1983-05-30).
+escenario:
+  cultivo: trigo
+  cultivar: intermedio-largo
+  estacion: "87480"
+  suelo: RC00000001
+  siembra: "1983-05-30"
+
+# Donde y con que nombre escribir los CSV de salida.
+salida:
+  outdir: salidas
+  # prefix: opcional; por defecto es "<cultivo>_<estacion>_<siembra>"

@@ -1,0 +1,26 @@
+Package: balancehidrico
+Type: Package
+Title: Fenologia, Profundizacion Radicular y Curva Kcb (Metodo CRC-SAS)
+Version: 0.1.0
+Authors@R: person("CRC-SAS", email = "crc-sas@example.org", role = c("aut", "cre"))
+Description: Implementacion del metodo propio de CRC-SAS (no DSSAT) de
+    fenologia por acumulacion de unidades termicas, profundizacion
+    radicular potencial y curva de Kcb para trigo, maiz y soja. El
+    balance hidrico diario (Paso 4) no esta incluido en este paquete.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+Imports:
+    dplyr,
+    tibble,
+    lubridate,
+    readr,
+    yaml,
+    rlang,
+    glue,
+    utils
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

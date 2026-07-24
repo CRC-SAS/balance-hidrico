@@ -1,0 +1,157 @@
+# =============================================================================
+# parametros_ejemplo.yml
+#
+# Archivo de parametros para el paquete balancehidrico (metodo propio CRC-SAS,
+# ver docs/documento_maestro_fenologia_balance_hidrico.md y docs/v2/).
+#
+# Todos los valores numericos de la seccion `cultivos` fueron tomados
+# directamente de la hoja `cultivo` de docs/v2/Calculos fenologia y balance
+# hidrico.xlsx (ya verificados contra las respuestas del experto a la
+# Seccion 2A: F-1 a F-7, PR-1, PR-2, KC-1, KC-2).
+#
+# Este archivo cubre unicamente lo que necesitan los Pasos 1-3 (Fenologia,
+# Profundizacion radicular, Curva Kcb). NO incluye parametros del Paso 4
+# (Balance hidrico diario: CN, kl, Um, U, DR, etc.), que todavia no esta
+# especificado.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# estaciones: metadatos por estacion meteorologica (no varian dia a dia, por
+# eso no van en el CSV de clima). `latitud` en grados decimales (negativa =
+# hemisferio sur), se usa para calcular el fotoperiodo (Fp) de cada dia.
+# -----------------------------------------------------------------------------
+estaciones:
+  "87480":
+    latitud: -32.9036
+
+# -----------------------------------------------------------------------------
+# suelos: solo lo que necesita el Paso 2 (Profundizacion radicular) para topear
+# el crecimiento radicular potencial contra la profundidad maxima del suelo
+# (regla del documento: "hasta la prof. maxima del suelo o el cuaje de granos,
+# lo que ocurra primero" -- ver duda PR-1). El resto de las propiedades del
+# suelo (PMP, CC, Sat, CN, U, DR, kl, Um) pertenecen al Paso 4 y no estan aca.
+# -----------------------------------------------------------------------------
+suelos:
+  RC00000001:
+    profundidad_maxima_m: 1.8
+
+# -----------------------------------------------------------------------------
+# cultivos: coeficientes fenologicos (Paso 1), de raiz (Paso 2) y de Kcb
+# (Paso 3), por cultivo y, cuando corresponde, por cultivar.
+#
+# Unidades: temperaturas en °C, unidades termicas (ut_*) en °C-dia,
+# fotoperiodos umbral (fpu_*) en horas, tasa de profundizacion (raiz.pr) en
+# cm/°C, profundidad inicial (raiz.pr_s_e) en metros.
+# -----------------------------------------------------------------------------
+cultivos:
+
+  # ---------------------------------------------------------------------------
+  # TRIGO
+  # Responde al fotoperiodo (dia largo) entre Emergencia (E) y Espiguilla
+  # Terminal (ET); insensible despues. Temperatura base unica (tb_a) durante
+  # todo el ciclo S->MF.
+  # ---------------------------------------------------------------------------
+  trigo:
+    tb_a: 0              # temperatura base (°C), todo el ciclo (S->MF)
+    ut_s_e: 150           # UT Siembra -> Emergencia
+    ut_e_fkcbini: 300     # UT Emergencia -> fin Kcb inicial
+    ut_e_ikcbmax: 1000    # UT Emergencia -> inicio Kcb maximo
+    ut_e_et: 400          # UT Emergencia -> Espiguilla Terminal (hito1), ajustado por Fp y RCF del cultivar
+    ut_et_ipc: 100        # UT ET -> inicio periodo critico
+    ut_et_z71: 700        # UT ET -> Z71 (cuaje de granos, hito2). Z71 != fPC (ver duda F-1)
+    ut_et_fpc: 800        # UT ET -> fin periodo critico (fPC = ET + 800, distinto de Z71 = ET + 700)
+    ut_fpc_mf: 400        # UT fin periodo critico -> madurez fisiologica (MF = fPC + 400)
+    raiz:
+      pr_s_e: 0.2          # profundidad radical constante entre S y E (m)
+      pr: 0.13             # tasa de profundizacion radical (cm/°C)
+      tb_c: 0              # temperatura base para el crecimiento radicular (°C)
+    kcb:
+      kcb_ini: 0.15        # Kcb inicial (constante desde E hasta fin Kcb inicial)
+      kcb_max: 1.10         # Kcb maximo (constante desde inicio Kcb maximo hasta MF; no declina -- ver duda KC-1)
+    cultivares:
+      # RCF: respuesta del cultivar al fotoperiodo (mayor RCF = menor
+      # acumulacion diaria de UT con Fp bajo = ciclo E->ET mas largo)
+      intermedio-corto:
+        rcf: 0.7
+      intermedio-largo:
+        rcf: 0.85
+
+  # ---------------------------------------------------------------------------
+  # MAIZ
+  # No responde al fotoperiodo. La temperatura base cambia de tb_a (S->E) a
+  # tb_b (E->MF). La diferencia entre cultivares esta en los requerimientos
+  # termicos hasta el cuaje de granos (R2, hito1 = hito2 en maiz).
+  # ---------------------------------------------------------------------------
+  maiz:
+    tb_a: 10              # temperatura base (°C) Siembra -> Emergencia
+    tb_b: 8                # temperatura base (°C) Emergencia -> MF
+    ut_s_e: 80             # UT Siembra -> Emergencia
+    ut_e_fkcbini: 120      # UT Emergencia -> fin Kcb inicial
+    ut_e_ikcbmax: 560      # UT Emergencia -> inicio Kcb maximo
+    raiz:
+      pr_s_e: 0.2
+      pr: 0.20
+      tb_c: 8
+    kcb:
+      kcb_ini: 0.15
+      kcb_max: 1.10
+    cultivares:
+      # Por cultivar: UT Emergencia->R2 (cuaje, hito1=hito2), UT
+      # Emergencia->inicio y fin de periodo critico (R2-450 y R2+100), y UT
+      # R2->madurez fisiologica.
+      templado-corto:
+        ut_e_r2: 950
+        ut_e_ipc: 500
+        ut_e_fpc: 1050
+        ut_r2_mf: 550
+      templado-intermedio:
+        ut_e_r2: 1050
+        ut_e_ipc: 600
+        ut_e_fpc: 1150
+        ut_r2_mf: 650
+      tropical-intermedio:
+        ut_e_r2: 1150
+        ut_e_ipc: 700
+        ut_e_fpc: 1250
+        ut_r2_mf: 700
+
+  # ---------------------------------------------------------------------------
+  # SOJA
+  # Responde al fotoperiodo (dia corto) desde Emergencia hasta Madurez
+  # Fisiologica. Tiene ademas una temperatura optima (to_a) por encima de la
+  # cual las UT diarias no siguen aumentando. El fotoperiodo umbral (fpu_*)
+  # varia por cultivar y por etapa (E->R1 vs R1->MF).
+  # ---------------------------------------------------------------------------
+  soja:
+    tb_a: 10               # temperatura base (°C) Siembra -> Emergencia
+    tb_b: 7                 # temperatura base (°C) Emergencia -> MF
+    to_a: 27                # temperatura optima (°C): UT diaria usa min(Tm, to_a)
+    ut_s_e: 100              # UT Siembra -> Emergencia
+    ut_e_fkcbini: 180        # UT Emergencia -> fin Kcb inicial
+    ut_e_ikcbmax: 840        # UT Emergencia -> inicio Kcb maximo
+    ut_e_r1: 400             # UT Emergencia -> R1 (hito1), ajustado por Fp si Fp > fpu_e_r1
+    ut_r1_r5: 300            # UT R1 -> R5 (cuaje de granos, hito2). Siempre 300 (ver duda F-3)
+    ut_r1_ipc: 120           # UT R1 -> inicio periodo critico (iPC = R1 + 120)
+    ut_r5_fpc: 200           # UT R5 -> fin periodo critico (fPC = R5 + 200)
+    ut_r5_mf: 800            # UT R5 -> madurez fisiologica (MF = R5 + 800)
+    raiz:
+      pr_s_e: 0.2
+      pr: 0.20
+      tb_c: 8
+    kcb:
+      kcb_ini: 0.15
+      kcb_max: 1.10
+    cultivares:
+      # fpu_e_r1 / fpu_r1_mf: fotoperiodo umbral (horas) en cada etapa. Por
+      # encima del umbral, la acumulacion diaria de UT se penaliza
+      # linealmente (factor 0.3) -- cultivares de ciclo mas largo tienen
+      # umbral mas bajo.
+      GM3C:
+        fpu_e_r1: 13.5
+        fpu_r1_mf: 13
+      GM4L:
+        fpu_e_r1: 13
+        fpu_r1_mf: 12.5
+      GM6C:
+        fpu_e_r1: 12.5
+        fpu_r1_mf: 12
