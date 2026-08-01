@@ -50,3 +50,11 @@ rsconnect/
 
 # Salidas generadas por scripts/simular.R
 /salidas/
+
+# Documentos de trabajo temporales de CRC-SAS (fuente de MANUAL_TECNICO.md,
+# nunca se suben al repo -- se conservan solo localmente)
+/documentacion/referencias/
+
+# Dispositivo grafico nulo que crea Rscript al correr codigo de ggplot2/grid
+# fuera de una sesion interactiva (p.ej. documentacion/figuras/generar_figuras.R)
+/Rplots.pdf

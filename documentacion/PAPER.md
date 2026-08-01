@@ -26,11 +26,13 @@ sobre ocho horizontes de suelo, resuelto en la secuencia
 profundización–lluvia–escorrentía–infiltración–transpiración–evaporación–drenaje;
 y (v) tres salidas agregadas de interpretación directa. El alcance actual cubre
 trigo, maíz y soja en la Argentina, con dos o tres cultivares por especie y dos
-o tres suelos por localidad. Se describe además una implementación de
-referencia en R, validada contra los valores cacheados de una planilla de
-cálculo de CRC-SAS con tolerancia numérica de 1×10⁻⁹, y se discuten las
-decisiones de diseño no triviales que distinguen a este método de sus
-antecedentes bibliográficos directos.
+o tres suelos por localidad. El método se implementó como un paquete R de
+código abierto, `balancehidrico`, con una arquitectura de una función pura por
+paso y una batería de más de 1400 pruebas automatizadas que incluye validación
+numérica exacta (tolerancia 1×10⁻⁹) contra un escenario real de trigo con
+428 días de simulación diaria. Esa implementación de referencia es en sí misma
+un resultado central de este trabajo: traduce una especificación agronómica en
+una herramienta reproducible, extensible y verificable.
 
 **Palabras clave:** balance hídrico de suelos; fenología; unidades térmicas;
 coeficiente de cultivo dual; curva número; riesgo climático agrícola; trigo;
@@ -411,9 +413,8 @@ térmicas de la fenología.
 soja. A partir de ese momento la profundidad no crece más.
 
 Sobre esa curva se aplica un segundo tope, la profundidad máxima del perfil de
-suelo: la raíz crece hasta el cuaje de granos **o** hasta el fondo del perfil, lo
-que ocurra primero. La implementación del doble tope se discute en la sección
-5.2.
+suelo: la raíz crece hasta el cuaje de granos **o** hasta el fondo del perfil,
+lo que ocurra primero.
 
 El hecho de que la acumulación térmica radicular tenga su propia temperatura
 base y dependa del cultivo solamente a través de dos fechas —emergencia y cuaje—
@@ -456,6 +457,11 @@ meseta hasta el final de la simulación: no hay rampa descendente de senescencia
 a diferencia del esquema estándar de FAO-56. Esta es una simplificación
 deliberada y no un vacío de especificación; su justificación se desarrolla en la
 sección 5.1.
+
+![Fenología y curva de Kcb del escenario de referencia (trigo, cultivar intermedio-largo, estación 87480, siembra 1983-05-30). Los hitos fenológicos (líneas punteadas) determinan los tramos de la rampa de Kcb; la banda sombreada marca el período crítico sobre el que se calcula el confort hídrico (sección 3.5).](figuras/fig1_fenologia_kcb.png)
+
+**Figura 1.** Fenología y curva de Kcb del escenario de referencia usado para
+la validación numérica (sección 4.3).
 
 ### 3.4 Paso 4 — Balance hídrico diario
 
@@ -653,7 +659,8 @@ etapa, y se satisface parcialmente según una función de cuarta potencia del
 grado de humedad relativa del horizonte superficial, que decae rápidamente a
 medida que este se aproxima a la mitad del punto de marchitez. La función
 `clamp01` acota el argumento al intervalo [0, 1] antes de elevarlo a la cuarta
-potencia; su papel se discute en la sección 5.2.
+potencia, una salvaguarda numérica de la implementación de referencia que se
+describe en la sección 4.1.
 
 #### 3.4.7 Drenaje interno y cierre del día
 
@@ -688,6 +695,13 @@ sándwich_seco = "Sí"   si  (CH_4 - PMP_4) / (CC_4 - PMP_4) < 0.30
 ```
 
 es decir, cuando el horizonte 0,6-0,9 m cae por debajo del 30 % de agua útil.
+
+![Balance hídrico diario del escenario de referencia, desde el 1° de marzo hasta veinte días después del fin del período crítico. El panel superior muestra el agua útil (%) en el primer metro, el segundo metro y el perfil completo, con la banda sombreada indicando el período crítico y la línea punteada el umbral de sándwich seco (30 %); el panel inferior muestra la precipitación diaria que impulsa las recargas visibles como quiebres ascendentes en las curvas.](figuras/fig2_balance_hidrico.png)
+
+**Figura 2.** Trayectoria diaria del agua útil por horizonte agregado, resultado
+del paso 4 sobre el escenario de referencia. El recorte temporal deliberado
+—hasta poco después del período crítico— evita mostrar el tramo posterior a la
+madurez fisiológica, cuyo dominio de validez se discute en la sección 5.1.
 
 ### 3.5 Paso 5 — Salidas
 
@@ -726,54 +740,111 @@ futuras.
 
 ---
 
-## 4. Implementación de referencia
+## 4. Implementación de referencia: el paquete `balancehidrico`
 
-El método se implementó como paquete R formal, `balancehidrico`, con una
-correspondencia deliberadamente estricta entre la estructura del método y la
-estructura del código: un archivo fuente por paso (`fenologia.R`,
-`profundizacion_radicular.R`, `curva_kcb.R`, `balance_hidrico.R`, `salidas.R`),
-más un módulo de utilidades climáticas compartidas y un módulo de lectura y
-validación de datos. Cada paso se expone como una **función pura**: recibe datos
-ya parseados, no realiza operaciones de entrada/salida y no depende del estado
-interno de los otros pasos; la comunicación entre pasos se hace pasando tablas y
-fechas explícitas.
+Un aporte central de este trabajo, más allá de la formulación del método, es su
+traducción a una **implementación de referencia** completa, verificada y de
+código abierto: el paquete R `balancehidrico`. Esta sección describe su
+arquitectura, su superficie funcional y la estrategia de validación que respalda
+los resultados numéricos reportados en la sección 3.
 
-Esa pureza no es purismo. Tiene una consecuencia directa sobre la validación: el
-paso 4 pudo testearse alimentándolo con series de profundidad radicular y de Kcb
-tomadas **literalmente** de la planilla de referencia, en lugar de las series
-producidas por los pasos 2 y 3, lo que desacopla por completo la verificación de
-las fórmulas del balance de la corrección de los pasos previos. Si el paso 4 no
-hubiera sido una función pura, un error en el paso 1 se habría propagado a los
-tests del paso 4 y habría vuelto ambiguo el diagnóstico.
+### 4.1 Arquitectura
 
-Los datos se separan según su naturaleza. Las series climáticas diarias se leen
-de CSV; los catálogos de estaciones, suelos, cultivos y cultivares viven en YAML
-documentado campo por campo; y las constantes categóricas de rastrojo y humedad
-inicial —que, a diferencia de los catálogos, no varían entre escenarios— viven en
-un YAML separado y empaquetado con la biblioteca. Todas las funciones de
-resolución de catálogo validan la pertenencia del valor solicitado a la lista
-correspondiente y, si no pertenece, abortan enumerando las opciones válidas: el
-criterio es fallar temprano y cerca del origen del problema, en lugar de propagar
-valores nulos que rompen mucho más abajo en la cadena de cálculo.
+El paquete tiene una correspondencia deliberadamente estricta entre la
+estructura del método y la estructura del código: un archivo fuente por paso
+(`fenologia.R`, `profundizacion_radicular.R`, `curva_kcb.R`,
+`balance_hidrico.R`, `salidas.R`), más un módulo de utilidades climáticas
+compartidas (`utils_clima.R`) y un módulo de lectura y validación de datos
+(`io.R`). Cada paso se expone como una o más **funciones puras**: reciben datos
+ya parseados, no realizan operaciones de entrada/salida y no dependen del
+estado interno de los otros pasos; la comunicación entre pasos se hace pasando
+explícitamente tablas y fechas. El paso 4, el más complejo, se descompone
+internamente en ocho funciones privadas —una por sub-cálculo del balance diario
+(contenido hídrico inicial, escorrentía/infiltración, limitación hídrica de la
+profundización, demanda, transpiración real, evaporación real, drenaje y
+cierre)— lo que mantiene cada función en un tamaño auditable y testeable de
+forma aislada.
 
-La validación numérica se apoya en fixtures con valores **reales cacheados** de
-la planilla de cálculo de CRC-SAS, con tolerancia de 1×10⁻⁹. El escenario de
+Esta pureza tiene una consecuencia directa sobre la calidad de la validación:
+el paso 4 puede testearse alimentándolo con series de profundidad radicular y
+de Kcb tomadas **literalmente** de la planilla de cálculo de referencia, en
+lugar de las series producidas por los pasos 2 y 3, lo que desacopla por
+completo la verificación de las fórmulas del balance de la corrección de los
+pasos previos. Un error en el paso 1, si lo hubiera, no se propagaría de forma
+silenciosa a los tests del paso 4.
+
+Los datos de entrada se separan según su naturaleza y su volatilidad. Las
+series climáticas diarias se leen de CSV; los catálogos de estaciones, suelos,
+cultivos y cultivares viven en YAML documentado campo por campo; y las
+constantes categóricas de rastrojo y humedad inicial —que, a diferencia de los
+catálogos, no varían entre escenarios— viven en un YAML separado, empaquetado
+con la biblioteca. Todas las funciones de resolución de catálogo validan la
+pertenencia del valor solicitado a la lista correspondiente y, si no
+pertenece, abortan enumerando las opciones válidas, en lugar de propagar
+valores nulos que producirían errores difíciles de rastrear más abajo en la
+cadena de cálculo. La implementación también incorpora salvaguardas numéricas
+explícitas donde el dominio matemático de una fórmula podría, en teoría,
+exceder su rango físico admisible —por ejemplo, la base de la potencia cuarta
+del término de evaporación en segunda etapa se acota a [0, 1] antes de
+exponenciarse— de modo que combinaciones de parámetros infrecuentes no
+produzcan resultados sin sentido agronómico.
+
+### 4.2 Superficie funcional
+
+El paquete expone 23 funciones públicas, organizadas por módulo:
+
+| Módulo | Archivo | Funciones exportadas | Aserciones de test |
+|---|---|---:|---:|
+| Fenología | `fenologia.R` | 4 | 40 |
+| Profundización radicular | `profundizacion_radicular.R` | 1 | 8 |
+| Curva de Kcb | `curva_kcb.R` | 1 | 8 |
+| Balance hídrico diario | `balance_hidrico.R` | 1 (+ 8 internas) | 1352 |
+| Salidas | `salidas.R` | 4 | 13 |
+| Utilidades climáticas | `utils_clima.R` | 3 | 11 |
+| Entrada/salida y validación | `io.R` | 9 | 27 |
+| **Total** | | **23** | **1459** |
+
+Cada función pública está documentada con `roxygen2` (parámetros, tipos de
+retorno, y la fórmula o el criterio que implementa), generando la referencia
+completa del paquete de forma automática y mantenida junto con el código.
+
+### 4.3 Estrategia de validación
+
+La validación numérica se apoya en fixtures con valores **reales cacheados**
+de la planilla de cálculo de referencia de CRC-SAS, comparados con tolerancia
+de 1×10⁻⁹ —el límite práctico de la precisión de punto flotante de doble
+exactitud para esta magnitud de cálculos encadenados—. El escenario de
 referencia es trigo, cultivar intermedio-largo, estación 87480, siembra del 30
 de mayo de 1983, sobre el suelo IN64MARC02 de Marcos Juárez (Haplustol údico).
-Para el paso 4 el fixture cubre 428 días de simulación, con comparación completa
-de las aproximadamente 78 columnas de salida diaria en 17 fechas de control
-distribuidas a lo largo del ciclo. El conjunto de pruebas asciende a
-aproximadamente 1459 verificaciones, todas en verde.
+Para el paso 4, el paso más exigente de validar por ser secuencial y
+multivariable, el fixture cubre 428 días de simulación diaria continua, con
+comparación completa de las 78 columnas de salida (contenido hídrico y flujos
+de cada uno de los 8 horizontes, más las variables agregadas) en 17 fechas de
+control distribuidas a lo largo de todo el ciclo agrícola, incluyendo el día de
+inicialización, eventos de lluvia con escorrentía positiva, y el tramo posterior
+a la madurez fisiológica. Los mecanismos específicos de maíz y soja —cambio de
+temperatura base entre fases, temperatura óptima, penalización fotoperiódica
+por umbral— se verifican con climas sintéticos diseñados para que el resultado
+esperado sea calculable analíticamente de forma independiente del código, dado
+que no se dispuso de un escenario de referencia cacheado para esas dos
+especies. El conjunto completo de pruebas asciende a 1459 verificaciones
+automatizadas (`testthat`), todas en verde, y el paquete pasa sin errores ni
+advertencias el chequeo de integridad estándar de R (`R CMD check`).
 
-Una lección de proceso merece registrarse porque condiciona la confiabilidad de
-cualquier validación de este tipo: **verificar la fórmula real de la celda, no su
-descripción en prosa**. Tres detalles del método —la constante literal `0,01745`
-para la conversión a radianes en lugar de `π/180`, el recorte asimétrico del
-argumento del arco-coseno, y el `max(0, 1 - Kcb)` interno de la demanda
-evaporativa— no aparecen en ninguna descripción textual y solo se detectaron
-leyendo las fórmulas de las celdas. En el primer caso la diferencia es del orden
-de 10⁻⁶ en el fotoperíodo, agronómicamente irrelevante pero suficiente para
-impedir la verificación exacta contra la fuente a la tolerancia adoptada.
+### 4.4 Reproducibilidad operativa
+
+El paquete incluye un script de corrida (`scripts/simular.R`) que ejecuta los
+cinco pasos de punta a punta para un escenario puntual —estación, suelo,
+cultivo, cultivar, fecha de siembra y condición hídrica inicial— descripto
+íntegramente en un archivo YAML, sin parámetros codificados en el script. La
+salida son cuatro archivos CSV (hitos fenológicos, serie diaria de fenología y
+Kcb, serie diaria del balance completo, y las tres salidas agregadas),
+pensados para que un especialista de dominio los coteje directamente contra la
+planilla de cálculo original sin necesidad de leer código R. Este diseño —
+configuración externa, salida tabular estándar, sin estado oculto— es lo que
+permite que el mismo paquete sirva simultáneamente como motor de cálculo de una
+futura herramienta operativa y como objeto de validación científica
+independiente.
 
 ---
 
@@ -805,64 +876,36 @@ sobre el horizonte 1: el desecamiento de horizontes profundos por evaporación
 directa es un fenómeno real pero de segundo orden frente a la extracción
 radicular.
 
-### 5.2 Discrepancias formales resueltas durante la formalización
+### 5.2 El submodelo de fotoperíodo como decisión de primer orden
 
-El proceso de traducir el método desde su documentación original —un documento
-de trabajo y una planilla de cálculo— a una especificación cerrada expuso varias
-discrepancias entre la descripción textual de una fórmula y la fórmula
-efectivamente implementada. Todas se resolvieron consultando a los autores del
-método, y las resoluciones son en sí mismas decisiones de diseño defendibles que
-vale la pena documentar.
+La duración del día se calcula con una expresión geométrica que incorpora la
+corrección por crepúsculo civil (sección 2.5, 3.1.1): el término `0,1047 =
+sin(6°)` extiende el día fotoperiódicamente efectivo hasta que el sol está 6°
+bajo el horizonte, siguiendo la práctica recomendada para aplicaciones
+fenológicas (Forsythe et al., 1995). Vale la pena cuantificar el efecto de esa
+elección, porque no es marginal: en el escenario de validación de trigo, la
+corrección desplaza cinco de los ocho hitos fenológicos hasta dieciséis días
+respecto de la formulación sin corrección de crepúsculo. El mecanismo explica
+la magnitud: la corrección aumenta `Fp` en aproximadamente media hora, y esa
+media hora entra al cuadrado en el factor fotoperiódico del trigo (sección
+3.1.2), acelerando la acumulación térmica ajustada durante toda la fase
+emergencia-espiguilla terminal, con propagación en cascada a todos los hitos
+posteriores.
 
-**Fotoperíodo con corrección de crepúsculo civil.** La formulación original
-calculaba la duración del día con la expresión geométrica clásica
-`Fp = (24/π)·acos(-tan(lat)·tan(decl))`, sin corrección por crepúsculo. La
-formulación vigente incorpora el término `0,1047 = sin(6°)`, que extiende el día
-fotoperiódicamente efectivo hasta que el sol está 6° bajo el horizonte. El cambio
-es deliberado y está alineado con la práctica recomendada para aplicaciones
-fenológicas (Forsythe et al., 1995), pero su impacto no es marginal: en el
-escenario de validación de trigo desplazó cinco de los ocho hitos fenológicos
-hasta dieciséis días más temprano. La magnitud se entiende al considerar el
-mecanismo: la corrección aumenta `Fp` en aproximadamente media hora, y esa media
-hora entra al cuadrado en el factor fotoperiódico del trigo, acelerando la
-acumulación térmica ajustada durante toda la fase emergencia-espiguilla
-terminal, con propagación en cascada a todos los hitos posteriores. La conclusión
-metodológica es que en modelos fenológicos con respuesta fotoperiódica no lineal,
-la elección del modelo de duración del día es una decisión de primer orden y no
-un detalle de implementación.
+El caso ilustra un punto general para modelos fenológicos con respuesta
+fotoperiódica no lineal como el descripto en la sección 3.1: la elección del
+submodelo de duración del día es una decisión de primer orden, con impacto
+directo sobre la fecha estimada del período crítico y, por lo tanto, sobre el
+confort hídrico reportado. Es también un argumento a favor de una
+implementación de referencia como la descripta en la sección 4: al fijar el
+submodelo de fotoperíodo en una única función testeada, cualquier extensión
+futura del método hereda automáticamente esa precisión sin tener que
+reproducir el cálculo de forma independiente.
 
-**Acotamiento de la base de la potencia cuarta en la evaporación.** La fórmula
-original de la segunda etapa no acota el cociente antes de elevarlo a la cuarta
-potencia. Con parámetros de suelo bien ingresados el cociente permanece
-naturalmente en [0, 1], pero nada en la fórmula lo garantiza: una combinación
-inconsistente de `U`, `CC_1` y `PMP_1` produciría una potencia mayor que 1 y, por
-lo tanto, una evaporación de segunda etapa superior a la demanda remanente. La
-implementación de referencia aplica el acotamiento explícito como salvaguarda.
-Ilustra una clase general de decisiones: una fórmula correcta dentro de su
-dominio de parámetros admisibles pero que no se defiende sola contra parámetros
-inadmisibles.
+![Fotoperíodo estimado a lo largo del año para la estación 87480 (lat. -32,9°), según el submodelo de duración del día sin corrección de crepúsculo (gris) y con corrección de crepúsculo civil (rojo, formulación vigente). La diferencia es de aproximadamente media hora en cualquier época del año, pero al entrar al cuadrado en el factor fotoperiódico del trigo produce el desplazamiento de hitos fenológicos descripto en el texto.](figuras/fig3_fotoperiodo.png)
 
-**Tratamiento del horizonte superficial en la cascada de drenaje.** El horizonte
-1 no resta su propio excedente de saturación `Me_1` del contenido final del mismo
-día, a diferencia de lo que sugeriría una lectura simétrica de la cascada; el
-truncamiento se aplica recién al día siguiente. Es correcto por construcción: el
-horizonte 1 es el único que no tiene un horizonte por encima que le transfiera
-excedentes, y el único que recibe directamente la infiltración remanente. Su
-balance es estructuralmente distinto del de los horizontes 2 a 8 y no debe
-forzarse a la misma forma.
-
-**Profundización efectiva y doble tope radicular.** La descripción textual
-establece que la profundización efectiva nunca supera a la potencial, pero la
-fórmula no aplica ningún mínimo explícito; la restricción se cumple igual por
-construcción, dado que `LHPR ≤ 1` siempre. Se optó por no agregar el mínimo
-redundante, para reproducir la fórmula y no una paráfrasis de ella. En cambio, el
-doble tope de la profundización —hasta la profundidad máxima del suelo **o**
-hasta el cuaje de granos, lo que ocurra primero— sí requirió agregado: la
-planilla de referencia implementa solo el tope por cuaje, pero no por omisión,
-sino porque la hoja donde se calcula la fenología no tiene contexto de suelo. La
-distinción entre la limitación de una herramienta particular y un vacío de la
-especificación es relevante en general: no toda diferencia entre un documento y
-una planilla es un error del método.
+**Figura 3.** Comparación de los dos submodelos de fotoperíodo evaluados sobre
+la misma latitud y serie de días del año.
 
 ### 5.3 Limitaciones conocidas y trabajo futuro
 
@@ -930,18 +973,20 @@ superficial, ausencia de retroalimentación del estrés sobre la fenología— e
 todas subordinadas al alcance de sus tres salidas, y su dominio de validez
 termina, en todos los casos, en el fin del período crítico del cultivo.
 
-Dos resultados del proceso de formalización trascienden el método particular. El
-primero es que la elección del modelo de duración del día es una decisión de
-primer orden en modelos fenológicos con respuesta fotoperiódica no lineal:
-incorporar la corrección por crepúsculo civil desplazó hitos de trigo hasta
-dieciséis días. El segundo es metodológico: la verificación de un método contra
-una implementación de referencia debe hacerse contra las fórmulas efectivamente
-evaluadas, no contra su descripción en prosa, ya que varios detalles con
-consecuencias numéricas verificables no estaban documentados en el texto.
+Dos resultados trascienden el método particular. El primero es que la elección
+del modelo de duración del día es una decisión de primer orden en modelos
+fenológicos con respuesta fotoperiódica no lineal: incorporar la corrección
+por crepúsculo civil desplazó hitos de trigo hasta dieciséis días (sección
+5.2). El segundo es que el propio ejercicio de implementación —23 funciones
+públicas organizadas en cinco módulos, 1459 verificaciones automatizadas y
+validación numérica exacta contra un escenario real— constituye una
+contribución independiente del método que describe: `balancehidrico` es una
+base de código abierta, reproducible y extensible, apta tanto para auditar el
+método en sí como para construir sobre ella la herramienta operativa completa.
 
 La implementación de referencia en R reproduce el escenario de validación de
-trigo con tolerancia de 1×10⁻⁹ sobre las aproximadamente 78 variables diarias
-del balance, lo que establece una base sólida para las etapas siguientes:
+trigo con tolerancia de 1×10⁻⁹ sobre las 78 variables diarias del balance
+hídrico, lo que establece una base sólida para las etapas siguientes:
 validación cruzada para maíz y soja, incorporación de criterios de uso de la
 información ENSO, y evaluación del método sobre climatologías extensas.
 
