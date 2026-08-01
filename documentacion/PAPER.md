@@ -206,7 +206,7 @@ clasifica trimestres móviles en Niño, Niña o Neutro según la anomalía de
 temperatura superficial del mar en la región Niño 3.4. En la versión actual del
 método el ENSO está descripto como dato de entrada y como eje previsto de
 segmentación de resultados, pero todavía no interviene en ninguna fórmula del
-balance; se detalla este punto en la sección 5.3.
+balance; se detalla este punto en la sección 5.4.
 
 ---
 
@@ -876,7 +876,65 @@ sobre el horizonte 1: el desecamiento de horizontes profundos por evaporación
 directa es un fenómeno real pero de segundo orden frente a la extracción
 radicular.
 
-### 5.2 El submodelo de fotoperíodo como decisión de primer orden
+### 5.2 Comparación con otros paquetes R
+
+R cuenta con varios paquetes publicados en CRAN para problemas de balance
+hídrico de suelo y evapotranspiración, con alcances y supuestos distintos
+de los de `balancehidrico`. Repasarlos ayuda a situar la contribución
+específica de este trabajo dentro de ese panorama, más que a establecer una
+jerarquía de calidad entre herramientas construidas con objetivos diferentes.
+
+`CropWaterBalance` (Blain et al., 2024) calcula el balance hídrico climático diario para
+programación de riego, con varios métodos de evapotranspiración de
+referencia (Penman-Monteith, Priestley-Taylor, entre otros) sobre un balance
+de suelo de compartimento único. `AquaBEHER` (Takele y Dell'Acqua, 2024)
+integra evapotranspiración diaria con un balance de la zona radicular,
+también de compartimento simplificado, para estimar el calendario de la
+estación húmeda (inicio, cese y duración) en sistemas de secano —un problema
+de caracterización agroclimática regional distinto del que resuelve el
+método aquí descripto—. `Ecohydmod` (Souza, 2017) simula balance
+hídrico de suelo junto con lluvia estocástica y dinámica de vegetación vía
+NDVI, con un foco ecohidrológico orientado a vegetación natural o pastizales
+más que a cultivos agrícolas manejados por cultivar. Ninguno de los tres
+representa explícitamente la fenología de un cultivo por acumulación
+térmica con sensibilidad al fotoperíodo, ni discretiza el perfil de suelo en
+múltiples horizontes con capacidades hídricas propias —dos rasgos centrales
+del método de la sección 3—.
+
+En el extremo opuesto de complejidad, los modelos de cultivo de propósito
+general —como WOFOST, disponible en R a través de `Rwofost` (Hijmans et al., 2025)— sí simulan
+fenología (incluida una reducción por fotoperíodo entre un óptimo y un
+crítico), biomasa, partición a órganos y rendimiento, con un nivel de
+detalle mecanicista mayor que el de este método. Esa generalidad tiene un
+costo: requieren una parametrización sustancialmente más extensa (dinámica
+de área foliar, eficiencia de conversión, coeficientes de partición, entre
+otros) y no están pensados para responder, con el mínimo de parámetros que
+un productor o asesor puede reportar sin mediciones de campo, la pregunta
+operativa puntual de este trabajo —cuánta agua hay a la siembra y qué
+confort hídrico cabe esperar en el período crítico—.
+
+| Paquete | Fenología por cultivo/cultivar | Fotoperíodo | Horizontes de suelo | Salida principal |
+|---|---|---|---|---|
+| `balancehidrico` (este trabajo) | Sí — trigo, maíz, soja, por cultivar | Sí, 2 submodelos distintos | 8, con capacidades hídricas propias | 3 indicadores de decisión de siembra |
+| CropWaterBalance | No | No | 1 (compartimento único) | Balance climático diario, ETo |
+| AquaBEHER | No | No | 1, zona radicular simplificada | Calendario de estación húmeda |
+| Ecohydmod | No (vegetación vía NDVI) | No | 1 (simplificado) | Humedad de suelo, escorrentía, NDVI |
+| Rwofost (WOFOST) | Sí, genérico multicultivo | Parcial (óptimo/crítico) | 1 o pocas capas configurables | Biomasa, área foliar, rendimiento |
+
+La combinación de rasgos de `balancehidrico` —fenología multi-cultivo
+calibrada por cultivar para condiciones de la Argentina; un perfil de ocho
+horizontes con limitación explícita de la profundización radicular por
+sequía del horizonte de avance (`LHPR`, sección 3.4.3); parametrización por
+clases categóricas de humedad y cobertura en lugar de mediciones; y una
+salida deliberadamente angosta de tres indicadores en vez de series
+completas de biomasa o rendimiento— no coincide, hasta donde se pudo
+relevar en CRAN, con ningún paquete disponible. Responde a un caso de uso
+puntual —la decisión de siembra bajo información de campo incompleta— que
+ni los paquetes de balance hídrico genérico ni los modelos de cultivo de
+propósito general abordan directamente con esa combinación de simplicidad
+paramétrica y especificidad agronómica regional.
+
+### 5.3 El submodelo de fotoperíodo como decisión de primer orden
 
 La duración del día se calcula con una expresión geométrica que incorpora la
 corrección por crepúsculo civil (sección 2.5, 3.1.1): el término `0,1047 =
@@ -907,7 +965,7 @@ reproducir el cálculo de forma independiente.
 **Figura 3.** Comparación de los dos submodelos de fotoperíodo evaluados sobre
 la misma latitud y serie de días del año.
 
-### 5.3 Limitaciones conocidas y trabajo futuro
+### 5.4 Limitaciones conocidas y trabajo futuro
 
 **ENSO sin uso en el cálculo.** La fase ENSO de cada campaña está definida como
 dato de entrada, derivada del Oceanic Niño Index (NOAA Climate Prediction
@@ -998,6 +1056,11 @@ Allen, R. G., Pereira, L. S., Raes, D., & Smith, M. (1998). *Crop
 evapotranspiration: Guidelines for computing crop water requirements.* FAO
 Irrigation and Drainage Paper 56. FAO, Roma.
 
+Blain, G. C., Sobierajski, G. R., Pires, R. C. M., Sparks, A. H., & Martins,
+L. L. (2024). *CropWaterBalance: Climate Water Balance For Irrigation
+Purposes.* R package version 0.2.0.
+https://CRAN.R-project.org/package=CropWaterBalance
+
 Boote, K. J., Jones, J. W., Hoogenboom, G., & Pickering, N. B. (1998). The
 CROPGRO model for grain legumes. En G. Y. Tsuji, G. Hoogenboom & P. K. Thornton
 (Eds.), *Understanding Options for Agricultural Production*, Systems Approaches
@@ -1014,6 +1077,11 @@ from temperature. *Applied Engineering in Agriculture*, 1(2), 96–99.
 Hawkins, R. H., Ward, T. J., Woodward, D. E., & Van Mullem, J. A. (2009). *Curve
 Number Hydrology: State of the Practice.* ASCE, Reston, VA.
 
+Hijmans, R. J., Fang, H., van Diepen, C. A., de Wit, A., van Kraalingen, D.,
+van der Wal, T., Rappoldt, C., Boogaard, H., & Noy, I. G. A. M. (2025).
+*Rwofost: WOFOST Crop Growth Simulation Model.* R package version 0.8-7.
+https://CRAN.R-project.org/package=Rwofost
+
 Jones, J. W., Hoogenboom, G., Porter, C. H., Boote, K. J., Batchelor, W. D.,
 Hunt, L. A., Wilkens, P. W., Singh, U., Gijsman, A. J., & Ritchie, J. T. (2003).
 The DSSAT cropping system model. *European Journal of Agronomy*, 18, 235–265.
@@ -1027,6 +1095,13 @@ incomplete cover. *Water Resources Research*, 8(5), 1204–1213.
 Ritchie, J. T., & Otter, S. (1985). Description and performance of CERES-Wheat:
 A user-oriented wheat yield model. En *ARS Wheat Yield Project*, ARS-38 (pp.
 159–175). USDA-ARS, Springfield.
+
+Souza, R. (2017). *Ecohydmod: Ecohydrological Modelling.* R package version
+1.0.0. https://CRAN.R-project.org/package=Ecohydmod
+
+Takele, R., & Dell'Acqua, M. (2024). *AquaBEHER: Estimation and Prediction of
+the Wet Season Calendar and Soil Water Balance for Agriculture.* R package
+version 1.4.0. https://CRAN.R-project.org/package=AquaBEHER
 
 USDA Soil Conservation Service (1972). *National Engineering Handbook, Section
 4: Hydrology.* USDA-SCS, Washington, DC.
