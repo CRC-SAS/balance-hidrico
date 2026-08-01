@@ -1,11 +1,17 @@
 # -----------------------------------------------------------------------------
-# TRIGO: fixtures reales, extraidas de docs/v2/Calculos fenologia y balance
-# hidrico.xlsx (hoja `fenologia`, cultivo=trigo, cultivar=intermedio-largo,
-# estacion 87480, siembra dda_S=150 -> 1983-05-30). Valores cacheados en el
-# xlsx, verificados en la sesion de analisis previa a esta implementacion.
+# TRIGO: fixtures reales, extraidas de documentacion/referencias/v3/Calculos
+# fenologia y balance hidrico.xlsx (hoja `fenologia`, cultivo=trigo,
+# cultivar=intermedio-largo, estacion 87480, siembra dda_S=150 ->
+# 1983-05-30). Valores cacheados en el xlsx, verificados en la sesion de
+# analisis previa a esta implementacion. Los hitos desde ET en adelante
+# (hito1, inicio/fin de periodo critico, hito2, madurez fisiologica) usan la
+# formula de fotoperiodo "vigente" confirmada por CRC-SAS el 2026-08-01 (ver
+# calcular_fotoperiodo()) -- son ~2 semanas mas tempranos que con la formula
+# anterior (xlsx original/v2). emergencia/fin_kcb_inicial/inicio_kcb_maximo
+# no dependen del fotoperiodo, no cambian.
 # -----------------------------------------------------------------------------
 
-test_that("calcular_fenologia_trigo reproduce los 8 hitos del xlsx v2", {
+test_that("calcular_fenologia_trigo reproduce los 8 hitos del xlsx v3", {
   clima <- leer_clima_csv(system.file("extdata", "clima_ejemplo.csv", package = "balancehidrico"))
   parametros <- leer_parametros_yaml(system.file("extdata", "parametros_ejemplo.yml", package = "balancehidrico"))
 
@@ -16,16 +22,16 @@ test_that("calcular_fenologia_trigo reproduce los 8 hitos del xlsx v2", {
   expect_equal(h$emergencia, as.Date("1983-06-18"))
   expect_equal(h$fin_kcb_inicial, as.Date("1983-07-22"))
   expect_equal(h$inicio_kcb_maximo, as.Date("1983-09-24"))
-  expect_equal(h$hito1, as.Date("1983-10-08"))
+  expect_equal(h$hito1, as.Date("1983-09-22"))
   expect_equal(h$nombre_hito1, "ET")
-  expect_equal(h$hito2, as.Date("1983-11-13"))
+  expect_equal(h$hito2, as.Date("1983-10-30"))
   expect_equal(h$nombre_hito2, "Z71")
-  expect_equal(h$inicio_periodo_critico, as.Date("1983-10-13"))
-  expect_equal(h$fin_periodo_critico, as.Date("1983-11-18"))
-  expect_equal(h$madurez_fisiologica, as.Date("1983-12-06"))
+  expect_equal(h$inicio_periodo_critico, as.Date("1983-09-27"))
+  expect_equal(h$fin_periodo_critico, as.Date("1983-11-04"))
+  expect_equal(h$madurez_fisiologica, as.Date("1983-11-24"))
 })
 
-test_that("calcular_fenologia_trigo reproduce la serie diaria de UT del xlsx v2 en puntos de control", {
+test_that("calcular_fenologia_trigo reproduce la serie diaria de UT del xlsx v3 en puntos de control", {
   clima <- leer_clima_csv(system.file("extdata", "clima_ejemplo.csv", package = "balancehidrico"))
   parametros <- leer_parametros_yaml(system.file("extdata", "parametros_ejemplo.yml", package = "balancehidrico"))
   res <- calcular_fenologia("trigo", "intermedio-largo", clima, "1983-05-30", parametros)

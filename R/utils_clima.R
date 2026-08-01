@@ -17,24 +17,40 @@ calcular_temperatura_media <- function(tx, tn, tm = NA_real_) {
 
 #' Declinacion solar
 #'
-#' Formula usada en la hoja `clima` del xlsx de referencia (columna
-#' "declinacion solar"): `23.45 * sin(radians(360/365 * (dia_anio - 81)))`.
+#' Formula "vigente" confirmada por CRC-SAS (2026-08-01, reemplaza la formula
+#' anterior en grados por esta, que ya incorpora la correccion por crepusculo
+#' civil usada en `calcular_fotoperiodo()`): `0.4093 * sin(0.0172 * (dia_anio
+#' - 82.2))`, usada en la hoja `clima` del xlsx de referencia v3 (columna
+#' "declinacion solar").
 #'
 #' @param dia_anio Integer. Dia del anio (1-366).
 #'
-#' @return Numeric. Declinacion solar en grados.
+#' @return Numeric. Declinacion solar en RADIANES (cambio de unidad respecto
+#'   de la version anterior de esta funcion, que devolvia grados).
 #' @export
 calcular_declinacion_solar <- function(dia_anio) {
-  23.45 * sin((360 / 365 * (dia_anio - 81)) * pi / 180)
+  0.4093 * sin(0.0172 * (dia_anio - 82.2))
 }
 
 #' Fotoperiodo (Fp)
 #'
 #' Horas de luz solar en funcion del dia del anio y la latitud, siguiendo la
-#' formula de la hoja `clima` del xlsx de referencia (celda `J2`). Maneja los
-#' casos extremos de dia y noche polar de la misma forma que el `IFERROR` de
-#' la formula original: si el argumento del arco-coseno es mayor a 1 (noche
-#' polar) el fotoperiodo es 0 h; si es menor a -1 (dia polar) es 24 h.
+#' formula "vigente" confirmada por CRC-SAS (2026-08-01) de la hoja `clima`
+#' del xlsx de referencia v3 (celda `J2`), con correccion por crepusculo
+#' civil (`0.1047 = sin(6°)`). La conversion de latitud a radianes usa la
+#' constante `0.01745` tal como esta escrita en la formula original de la
+#' planilla (una aproximacion de `pi/180`, no el valor exacto) -- reproducir
+#' esta constante literal es necesario para igualar los valores cacheados del
+#' xlsx dentro de la tolerancia de los tests.
+#'
+#' A diferencia de la formula anterior, esta NO tiene manejo simetrico de
+#' dia/noche polar: solo recorta el argumento del arco-coseno por abajo en
+#' `-0.87` (tal cual el `IF` de la celda `J2`), sin ninguna rama para el caso
+#' opuesto. Para las latitudes reales de Argentina que cubre esta
+#' herramienta (hasta ~-55°, Tierra del Fuego) el argumento nunca llega a
+#' superar 1, así que ese caso no está contemplado ni en la planilla ni acá:
+#' con una latitud fuera de ese rango la funcion puede devolver `NaN`
+#' (mismo comportamiento que un `#NUM!` en Excel).
 #'
 #' @param dia_anio Integer. Dia del anio (1-366).
 #' @param latitud Numeric. Latitud en grados decimales (negativa = hemisferio
@@ -44,14 +60,9 @@ calcular_declinacion_solar <- function(dia_anio) {
 #' @export
 calcular_fotoperiodo <- function(dia_anio, latitud) {
   declinacion <- calcular_declinacion_solar(dia_anio)
-  x <- -tan(latitud * pi / 180) * tan(declinacion * pi / 180)
+  lat_rad <- latitud * 0.01745
+  x <- (-sin(lat_rad) * sin(declinacion) - 0.1047) / (cos(lat_rad) * cos(declinacion))
+  x <- pmax(x, -0.87)
 
-  # acos() solo esta definido en [-1, 1]; se recorta el argumento para evitar
-  # NaN con warning en los casos de dia/noche polar, que igual se resuelven
-  # explicitamente en las dos primeras ramas.
-  dplyr::case_when(
-    x > 1  ~ 0,
-    x < -1 ~ 24,
-    TRUE   ~ 24 / pi * acos(pmin(pmax(x, -1), 1))
-  )
+  7.639 * acos(x)
 }

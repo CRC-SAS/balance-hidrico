@@ -1,12 +1,17 @@
 Package: balancehidrico
 Type: Package
-Title: Fenologia, Profundizacion Radicular y Curva Kcb (Metodo CRC-SAS)
+Title: Fenologia, Balance Hidrico y Salidas para Trigo, Maiz y Soja (Metodo CRC-SAS)
 Version: 0.1.0
-Authors@R: person("CRC-SAS", email = "crc-sas@example.org", role = c("aut", "cre"))
-Description: Implementacion del metodo propio de CRC-SAS (no DSSAT) de
+Authors@R: c(
+    person("Guillermo", "García", email = "ggarcia@crea.org.ar", role = "aut"),
+    person("Jorge Luis", "Mercau", email = "jorgemercau@gmail.com", role = "aut"),
+    person("Santiago", "Rovere", email = "srovere@gmail.com", role = c("aut", "cre")))
+Description: Implementacion del metodo propio de CRC-SAS (no DSSAT):
     fenologia por acumulacion de unidades termicas, profundizacion
-    radicular potencial y curva de Kcb para trigo, maiz y soja. El
-    balance hidrico diario (Paso 4) no esta incluido en este paquete.
+    radicular potencial, curva de Kcb, balance hidrico diario del suelo y
+    las salidas del metodo (eventos de lluvia pre-siembra, estado hidrico a
+    la siembra y confort hidrico en el periodo critico) para trigo, maiz y
+    soja.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

@@ -10,9 +10,15 @@ calcular_declinacion_solar(dia_anio)
 \item{dia_anio}{Integer. Dia del anio (1-366).}
 }
 \value{
-Numeric. Declinacion solar en grados.
+Numeric. Declinacion solar en RADIANES (cambio de unidad respecto
+de la version anterior de esta funcion, que devolvia grados).
 }
 \description{
-Formula usada en la hoja \code{clima} del xlsx de referencia (columna
-"declinacion solar"): \code{23.45 * sin(radians(360/365 * (dia_anio - 81)))}.
+Formula "vigente" confirmada por CRC-SAS (2026-08-01, reemplaza la formula
+anterior en grados por esta, que ya incorpora la correccion por crepusculo
+civil usada en \code{calcular_fotoperiodo()}): `0.4093 * sin(0.0172 * (dia_anio
+\itemize{
+\item 82.2))\verb{, usada en la hoja }clima` del xlsx de referencia v3 (columna
+"declinacion solar").
+}
 }

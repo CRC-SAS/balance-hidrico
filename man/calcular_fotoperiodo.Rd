@@ -17,8 +17,21 @@ Numeric. Fotoperiodo en horas.
 }
 \description{
 Horas de luz solar en funcion del dia del anio y la latitud, siguiendo la
-formula de la hoja \code{clima} del xlsx de referencia (celda \code{J2}). Maneja los
-casos extremos de dia y noche polar de la misma forma que el \code{IFERROR} de
-la formula original: si el argumento del arco-coseno es mayor a 1 (noche
-polar) el fotoperiodo es 0 h; si es menor a -1 (dia polar) es 24 h.
+formula "vigente" confirmada por CRC-SAS (2026-08-01) de la hoja \code{clima}
+del xlsx de referencia v3 (celda \code{J2}), con correccion por crepusculo
+civil (\verb{0.1047 = sin(6°)}). La conversion de latitud a radianes usa la
+constante \code{0.01745} tal como esta escrita en la formula original de la
+planilla (una aproximacion de \code{pi/180}, no el valor exacto) -- reproducir
+esta constante literal es necesario para igualar los valores cacheados del
+xlsx dentro de la tolerancia de los tests.
+}
+\details{
+A diferencia de la formula anterior, esta NO tiene manejo simetrico de
+dia/noche polar: solo recorta el argumento del arco-coseno por abajo en
+\code{-0.87} (tal cual el \code{IF} de la celda \code{J2}), sin ninguna rama para el caso
+opuesto. Para las latitudes reales de Argentina que cubre esta
+herramienta (hasta ~-55°, Tierra del Fuego) el argumento nunca llega a
+superar 1, así que ese caso no está contemplado ni en la planilla ni acá:
+con una latitud fuera de ese rango la funcion puede devolver \code{NaN}
+(mismo comportamiento que un \verb{#NUM!} en Excel).
 }

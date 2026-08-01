@@ -1,0 +1,29 @@
+# =============================================================================
+# constantes.yml
+#
+# Valores categoricos fijos del metodo CRC-SAS que NO varian entre
+# escenarios (a diferencia de parametros_ejemplo.yml, que es catalogo/datos
+# de escenario: estaciones, suelos, cultivos). Fuente: documentacion/
+# referencias/v3/Calculos fenologia y balance hidrico.xlsx, hoja
+# `balance hídrico`, filas 14-18 (tabla "Cantidad Rastrojo" / "Humedad"),
+# confirmado por el experto de CRC-SAS el 2026-08-01.
+# =============================================================================
+
+# Factor de reduccion de la evaporacion/demanda evaporativa de suelo por
+# cobertura de rastrojo (0-1). El usuario elige una de las 3 clases por
+# criterio subjetivo (a que situacion extrema se parece mas su campo), no
+# ingresa un % de cobertura medido. Usado en Paso 4
+# (.demanda_hidrica() / .evaporacion_real()).
+rastrojo:
+  Baja: 1          # Baja (0-20% cobertura)
+  Moderada: 0.8     # Moderada (30-50% cobertura)
+  Muy_Alta: 0.5     # Muy Alta (80-100% cobertura)
+
+# Fraccion de agua util (AU, 0-1) usada como condicion inicial del contenido
+# hidrico del suelo (Paso 4, .contenido_hidrico_inicial()). El usuario elige
+# una de las 4 clases (no un AU% medido en el campo).
+humedad_inicial:
+  Se: 0.10          # Seco
+  mS: 0.35          # Moderado Seco
+  mH: 0.65          # Moderado Humedo
+  Hu: 0.90          # Humedo

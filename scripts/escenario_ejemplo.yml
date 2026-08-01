@@ -13,13 +13,21 @@ clima: ../inst/extdata/clima_ejemplo.csv
 parametros: ../inst/extdata/parametros_ejemplo.yml
 
 # Escenario puntual a simular: mismo caso que tiene fixture cruzado contra
-# el xlsx de referencia de CRC-SAS (trigo, estacion 87480, siembra 1983-05-30).
+# el xlsx de referencia de CRC-SAS (trigo, estacion 87480, siembra 1983-05-30,
+# suelo IN64MARC02 -- Marcos Juarez, con datos completos de Paso 4).
 escenario:
   cultivo: trigo
   cultivar: intermedio-largo
   estacion: "87480"
-  suelo: RC00000001
+  suelo: IN64MARC02
   siembra: "1983-05-30"
+  # Paso 4 (balance hidrico diario): primer dia simulado (puede ser anterior
+  # a la siembra) y las clases categoricas de rastrojo/humedad inicial (ver
+  # inst/extdata/constantes.yml para los nombres validos).
+  fecha_inicio_balance: "1983-03-01"
+  rastrojo_clase: Moderada
+  humedad_inicial_clase_m1: Hu
+  humedad_inicial_clase_m2: Hu
 
 # Donde y con que nombre escribir los CSV de salida.
 salida:

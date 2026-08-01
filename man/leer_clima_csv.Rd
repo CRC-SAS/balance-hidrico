@@ -11,11 +11,12 @@ leer_clima_csv(path)
 }
 \value{
 Un tibble con columnas \code{station_id} (character), \code{date} (Date),
-\code{doy} (integer), \code{tx}, \code{tn}, \code{tm}, \code{pp} (double, \code{tm}/\code{pp} pueden venir
-\code{NA} si la columna no estaba en el CSV).
+\code{doy} (integer), \code{tx}, \code{tn}, \code{tm}, \code{pp}, \code{eto} (double, \code{tm}/\code{pp}/\code{eto}
+pueden venir \code{NA} si la columna no estaba en el CSV).
 }
 \description{
 Lee un CSV con el formato descripto en \code{inst/extdata/clima_ejemplo.csv}:
 una fila por dia y estacion, con columnas \code{station_id}, \code{date}, \code{tx}, \code{tn}
-y, opcionalmente, \code{tm} y \code{pp}. Agrega la columna \code{doy} (dia del anio).
+y, opcionalmente, \code{tm}, \code{pp} y \code{eto}. Agrega la columna \code{doy} (dia del
+anio).
 }

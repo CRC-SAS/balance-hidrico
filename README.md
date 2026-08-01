@@ -1,18 +1,22 @@
 # balancehidrico
 
-Paquete R que implementa el metodo propio de CRC-SAS (no DSSAT) de:
+Paquete R que implementa el método propio de CRC-SAS (no DSSAT) de:
 
-1. **Fenologia** de trigo, maiz y soja, por acumulacion de unidades termicas (UT).
-2. **Profundizacion radicular** potencial.
+1. **Fenología** de trigo, maíz y soja, por acumulación de unidades térmicas (UT).
+2. **Profundización radicular** potencial.
 3. **Curva de Kcb** (coeficiente basal de cultivo, FAO-56).
+4. **Balance hídrico diario** del suelo (escorrentía, infiltración,
+   transpiración, evaporación, drenaje, por horizonte).
+5. **Salidas**: eventos de lluvia pre-siembra, estado hídrico a la siembra
+   y confort hídrico durante el período crítico.
 
-para la herramienta de balance hidrico de cultivos de CRC-SAS.
+para la herramienta de balance hídrico de cultivos de CRC-SAS.
 
-> **Estado:** Pasos 1-3 (Fenologia, Profundizacion radicular, Curva Kcb) estan
-> completos e implementados. El **Paso 4 (Balance hidrico diario)** todavia
-> no esta especificado y **no forma parte de este paquete**. Ver
-> `documentacion/CONTINUIDAD_DESARROLLO.md` para el detalle completo del
-> estado del proyecto y que falta.
+> **Estado:** los 5 pasos del método están completos e implementados,
+> validados contra la planilla de referencia de CRC-SAS. Ver
+> `documentacion/MANUAL_TECNICO.md` para el detalle completo de fórmulas,
+> decisiones de diseño e historia del proyecto, y `documentacion/FUTURE_WORK.md`
+> para lo que sigue pendiente (no bloqueante).
 
 ## Contenido
 
@@ -27,36 +31,44 @@ para la herramienta de balance hidrico de cultivos de CRC-SAS.
 ## Que hace y que no hace
 
 El paquete expone funciones puras (sin efectos de lado, testeables de forma
-aislada) para tres procesos independientes:
+aislada) para los 5 pasos del método, más utilidades compartidas de lectura
+de datos:
 
-| Proceso | Funcion principal | Archivo |
+| Paso | Función principal | Archivo |
 |---|---|---|
-| Fenologia | `calcular_fenologia()` (dispatcher) + `calcular_fenologia_trigo()` / `_maiz()` / `_soja()` | `R/fenologia.R` |
-| Profundizacion radicular | `calcular_profundidad_radicular()` | `R/profundizacion_radicular.R` |
-| Curva de Kcb | `calcular_curva_kcb()` | `R/curva_kcb.R` |
+| 1. Fenología | `calcular_fenologia()` (dispatcher) + `calcular_fenologia_trigo()` / `_maiz()` / `_soja()` | `R/fenologia.R` |
+| 2. Profundización radicular | `calcular_profundidad_radicular()` | `R/profundizacion_radicular.R` |
+| 3. Curva de Kcb | `calcular_curva_kcb()` | `R/curva_kcb.R` |
+| 4. Balance hídrico diario | `calcular_balance_hidrico()` | `R/balance_hidrico.R` |
+| 5. Salidas | `calcular_salidas()` (+ `calcular_eventos_lluvia_pre_siembra()`, `calcular_estado_hidrico_siembra()`, `calcular_confort_hidrico()`) | `R/salidas.R` |
 
-Ademas hay utilidades compartidas de lectura de datos y calculo climatico:
+Utilidades compartidas de lectura de datos y cálculo climático:
 
-| Utilidad | Funcion | Archivo |
+| Utilidad | Función | Archivo |
 |---|---|---|
 | Leer clima diario desde CSV | `leer_clima_csv()` | `R/io.R` |
-| Leer parametros desde YAML | `leer_parametros_yaml()`, `obtener_parametros_cultivo()`, `obtener_latitud_estacion()`, `obtener_profundidad_maxima_suelo()` | `R/io.R` |
-| Temperatura media / fotoperiodo | `calcular_temperatura_media()`, `calcular_declinacion_solar()`, `calcular_fotoperiodo()` | `R/utils_clima.R` |
+| Leer parámetros de escenario desde YAML | `leer_parametros_yaml()`, `obtener_parametros_cultivo()`, `obtener_latitud_estacion()`, `obtener_profundidad_maxima_suelo()`, `obtener_suelo_balance_hidrico()` | `R/io.R` |
+| Leer constantes categóricas fijas desde YAML | `leer_constantes_yaml()`, `obtener_factor_rastrojo()`, `obtener_fraccion_humedad_inicial()` | `R/io.R` |
+| Temperatura media / fotoperíodo | `calcular_temperatura_media()`, `calcular_declinacion_solar()`, `calcular_fotoperiodo()` | `R/utils_clima.R` |
 
-**No incluye** (todavia):
+**No incluye** (todavía, ver `documentacion/FUTURE_WORK.md` para el detalle):
 
-- El Paso 4 (Balance hidrico diario: escorrentia, infiltracion, transpiracion,
-  evaporacion, drenaje, confort hidrico). La especificacion de ese paso esta
-  incompleta (ver `documentacion/CONTINUIDAD_DESARROLLO.md`, seccion "Paso 4").
-- Un script de orquestacion de simulaciones que corra un **conjunto** de
-  estaciones/suelos/cultivos/cultivares y agregue resultados (climatologia,
-  reporte por campaña). Lo que si existe es `scripts/simular.R`, que corre
-  **un** escenario puntual y exporta CSV (ver seccion
-  [Script de corrida](#script-de-corrida)) — pensado para generar salidas que
-  el experto de dominio pueda validar, no para correr en batch.
-- Cualquier logica DSSAT (CUL/ECO, CERES, CROPGRO). Este paquete es un metodo
-  alternativo, mas simple, desarrollado en paralelo; no depende del paquete
-  `DSSAT` de R ni de archivos `.CUL`/`.ECO`/`.SOL`.
+- Uso de ENSO en el cálculo del balance en sí (es un dato de entrada
+  descripto por CRC-SAS, pero sin criterio de uso definido todavía).
+- Un script de orquestación de simulaciones que corra un **conjunto** de
+  estaciones/suelos/cultivos/cultivares y agregue resultados (climatología,
+  reporte por campaña). Lo que sí existe es `scripts/simular.R`, que corre
+  **un** escenario puntual y exporta CSV (ver sección
+  [Script de corrida](#script-de-corrida)).
+- Fixtures cruzados contra la planilla de referencia para maíz y soja
+  (Pasos 1 y 3) — solo trigo tiene ese fixture; maíz/soja usan climas sintéticos.
+- El catálogo completo de suelos de CRC-SAS (600+ filas) — solo hay 2
+  suelos de ejemplo cargados en `inst/extdata/parametros_ejemplo.yml`.
+- Cualquier lógica DSSAT (CUL/ECO, CERES, CROPGRO). Este paquete es un
+  método alternativo, desarrollado en paralelo; no depende del paquete
+  `DSSAT` de R ni de archivos `.CUL`/`.ECO`/`.SOL`, aunque el diseño de la
+  fenología (Paso 1) sigue el mismo esquema conceptual que los modelos
+  CERES/CROPGRO de DSSAT (ver `documentacion/PAPER.md`).
 
 ## Instalacion
 
@@ -88,49 +100,58 @@ devtools::install(".")
 
 ## Configuracion (inputs)
 
-El paquete no asume ninguna fuente de datos particular (no lee de una base de
-datos ni de un servicio): recibe un **CSV de clima** y un **YAML de
-parametros**, ambos con ejemplos incluidos en `inst/extdata/`.
+El paquete no asume ninguna fuente de datos particular (no lee de una base
+de datos ni de un servicio): recibe un **CSV de clima**, un **YAML de
+parámetros de escenario** y un **YAML de constantes fijas**, todos con
+ejemplos incluidos en `inst/extdata/`.
 
 ### Clima (CSV)
 
-Una fila por dia y estacion. Columnas requeridas: `station_id`, `date`
-(`YYYY-MM-DD`), `tx` (temperatura maxima, °C), `tn` (temperatura minima, °C).
-Columnas opcionales: `tm` (temperatura media provista por la base climatica;
-si falta o viene vacia se recalcula como `(tx+tn)/2`), `pp` (precipitacion,
-mm; no la usan los Pasos 1-3, se incluye para el futuro Paso 4).
+Una fila por día y estación. Columnas requeridas: `station_id`, `date`
+(`YYYY-MM-DD`), `tx` (temperatura máxima, °C), `tn` (temperatura mínima,
+°C). Columnas opcionales: `tm` (temperatura media provista por la base
+climática; si falta se recalcula como `(tx+tn)/2`), `pp` (precipitación,
+mm), `eto` (evapotranspiración de referencia diaria, mm — dato de entrada,
+no se calcula; la usa el Paso 4).
 
 ```csv
-station_id,date,tx,tn,tm,pp
-87480,1983-01-01,35.2,21.1,27.8,1.4
-87480,1983-01-02,28.4,24.2,27,0
+station_id,date,tx,tn,tm,pp,eto
+87480,1983-01-01,35.2,21.1,27.8,1.4,6.5
+87480,1983-01-02,28.4,24.2,27,0,2.2
 ```
 
-Se lee con `leer_clima_csv(path)`, que devuelve un tibble y agrega la columna
-`doy` (dia del anio).
+Se lee con `leer_clima_csv(path)`, que devuelve un tibble y agrega la
+columna `doy` (día del año).
 
-### Parametros (YAML)
+### Parametros de escenario (YAML)
 
-Contiene tres secciones: `estaciones` (latitud, para calcular el
-fotoperiodo), `suelos` (profundidad maxima, para topear la profundizacion
-radicular) y `cultivos` (coeficientes fenologicos, de raiz y de Kcb por
-cultivo y cultivar). Ver `inst/extdata/parametros_ejemplo.yml`, que esta
-comentado campo por campo, y `documentacion/MANUAL_TECNICO.md` para el
-significado agronomico de cada parametro.
+Contiene `estaciones` (latitud), `suelos` (profundidad máxima para Paso 2,
+y opcionalmente los horizontes + escalares completos para Paso 4 — ver
+`obtener_suelo_balance_hidrico()`) y `cultivos` (coeficientes fenológicos,
+de raíz y de Kcb por cultivo y cultivar). Ver
+`inst/extdata/parametros_ejemplo.yml`, comentado campo por campo, y
+`documentacion/MANUAL_TECNICO.md` para el significado agronómico de cada
+parámetro.
 
-Se lee con `leer_parametros_yaml(path)`. Para extraer los parametros de un
-cultivo/cultivar puntual (con validacion: falla con un mensaje claro si el
-cultivo/cultivar no existe, en vez de devolver `NULL`s silenciosos):
+### Constantes fijas (YAML)
+
+`inst/extdata/constantes.yml` tiene las clases categóricas de rastrojo y
+humedad inicial que usa el Paso 4 (no varían entre escenarios, por eso
+están separadas del YAML de parámetros). Se lee con
+`leer_constantes_yaml()`, que por defecto apunta al archivo empaquetado —
+es el único caso del paquete con una ruta default.
 
 ```r
 parametros <- leer_parametros_yaml("inst/extdata/parametros_ejemplo.yml")
 p <- obtener_parametros_cultivo(parametros, "trigo", "intermedio-largo")
+constantes <- leer_constantes_yaml()  # usa el YAML empaquetado
 ```
 
 ## Ejemplo de uso
 
-Ejemplo end-to-end con los datos de ejemplo incluidos en el paquete (estacion
-87480, trigo, cultivar intermedio-largo, siembra 1983-05-30):
+Ejemplo end-to-end con los datos de ejemplo incluidos en el paquete
+(estación 87480, trigo, cultivar intermedio-largo, siembra 1983-05-30,
+suelo `IN64MARC02`):
 
 ```r
 devtools::load_all(".")  # o library(balancehidrico)
@@ -138,6 +159,7 @@ devtools::load_all(".")  # o library(balancehidrico)
 # 1) Leer inputs
 clima <- leer_clima_csv(system.file("extdata", "clima_ejemplo.csv", package = "balancehidrico"))
 parametros <- leer_parametros_yaml(system.file("extdata", "parametros_ejemplo.yml", package = "balancehidrico"))
+constantes <- leer_constantes_yaml()
 
 # 2) Paso 1: Fenologia
 fenologia <- calcular_fenologia(
@@ -150,9 +172,9 @@ fenologia <- calcular_fenologia(
 fenologia$hitos       # fechas de siembra, emergencia, fin Kcb inicial, ...
 fenologia$serie_diaria # serie diaria de UT acumuladas (sin fotoperiodo)
 
-# 3) Paso 2: Profundizacion radicular
+# 3) Paso 2: Profundizacion radicular (potencial)
 p_cultivar <- obtener_parametros_cultivo(parametros, "trigo", "intermedio-largo")
-profundidad_maxima_suelo <- obtener_profundidad_maxima_suelo(parametros, "RC00000001")
+profundidad_maxima_suelo <- obtener_profundidad_maxima_suelo(parametros, "IN64MARC02")
 
 raices <- calcular_profundidad_radicular(
   clima_estacion = clima,
@@ -172,42 +194,77 @@ kcb <- calcular_curva_kcb(
   kcb_ini = p_cultivar$kcb$kcb_ini,
   kcb_max = p_cultivar$kcb$kcb_max
 )
+
+# 5) Paso 4: Balance hidrico diario
+suelo <- obtener_suelo_balance_hidrico(parametros, "IN64MARC02")
+
+balance <- calcular_balance_hidrico(
+  clima_estacion = clima,
+  fecha_inicio = "1983-03-01",
+  serie_profundidad_radicular = raices,
+  serie_kcb = kcb,
+  suelo = suelo,
+  rastrojo_clase = "Moderada",
+  humedad_inicial_clase_m1 = "Hu",
+  humedad_inicial_clase_m2 = "Hu",
+  constantes = constantes
+)
+balance$serie_diaria  # ~78 columnas: agua por horizonte, escorrentia, transpiracion, evaporacion, drenaje...
+
+# 6) Paso 5: Salidas
+salidas <- calcular_salidas(
+  clima_estacion = clima,
+  fecha_siembra = "1983-05-30",
+  hitos = fenologia$hitos,
+  serie_diaria_balance = balance$serie_diaria
+)
+salidas$eventos_lluvia_pre_siembra  # entero
+salidas$estado_hidrico_siembra      # tibble 1 fila: au_pct_m1, au_pct_m2, au_pct_total, sandwich_seco
+salidas$confort_hidrico             # numeric 0-1
 ```
 
 ## Script de corrida
 
-`scripts/simular.R` corre los Pasos 1-3 para un escenario puntual y escribe
-dos CSV (`<prefix>_hitos.csv` y `<prefix>_serie_diaria.csv`) pensados para que
-el experto de dominio de CRC-SAS los compare contra el xlsx de referencia.
-Se ejecuta desde la raiz del repo, pasandole la ruta a un **YAML de
-configuracion de escenario**:
+`scripts/simular.R` corre los 5 pasos para un escenario puntual y escribe
+cuatro CSV (`<prefix>_hitos.csv`, `<prefix>_serie_diaria.csv`,
+`<prefix>_balance_diario.csv`, `<prefix>_salidas.csv`) pensados para que el
+experto de dominio de CRC-SAS los compare contra la planilla de referencia. Se
+ejecuta desde la raíz del repo, pasándole la ruta a un **YAML de
+configuración de escenario**:
 
 ```bash
 Rscript scripts/simular.R scripts/escenario_ejemplo.yml
 ```
 
-El YAML de configuracion (ver `scripts/escenario_ejemplo.yml`) tiene 4 claves:
+El YAML de configuración (ver `scripts/escenario_ejemplo.yml`) tiene estas
+claves:
 
 ```yaml
-clima: ../inst/extdata/clima_ejemplo.csv        # CSV de clima
-parametros: ../inst/extdata/parametros_ejemplo.yml  # YAML de parametros
+clima: ../inst/extdata/clima_ejemplo.csv            # CSV de clima
+parametros: ../inst/extdata/parametros_ejemplo.yml  # YAML de parametros de escenario
+# constantes: opcional, default usa el YAML empaquetado (rastrojo/humedad inicial)
 escenario:
   cultivo: trigo
   cultivar: intermedio-largo
   estacion: "87480"
-  suelo: RC00000001
+  suelo: IN64MARC02
   siembra: "1983-05-30"
+  fecha_inicio_balance: "1983-03-01"   # primer dia simulado de Paso 4
+  rastrojo_clase: Moderada
+  humedad_inicial_clase_m1: Hu
+  humedad_inicial_clase_m2: Hu
+  # sandwich_seco_inicial: opcional, default false
 salida:
   outdir: salidas       # default "salidas"
   # prefix: opcional; default "<cultivo>_<estacion>_<siembra>"
 ```
 
-Las rutas de `clima` y `parametros` son relativas a la ubicacion del propio
-YAML (no al directorio desde donde se corre el script), asi que un mismo
-archivo de configuracion funciona sin importar desde donde se invoque.
-Para correr otro escenario (otro cultivo/cultivar/estacion/suelo/fecha, o
-un CSV de clima distinto), se copia `scripts/escenario_ejemplo.yml` y se
-edita — no hace falta tocar `simular.R`.
+Las rutas de `clima`, `parametros` y `constantes` son relativas a la
+ubicación del propio YAML (no al directorio desde donde se corre el
+script), así que un mismo archivo de configuración funciona sin importar
+desde dónde se invoque. Para correr otro escenario, se copia
+`scripts/escenario_ejemplo.yml` y se edita — no hace falta tocar
+`simular.R`.
 
 Las salidas se escriben por defecto en `salidas/` (ignorado por git).
 
@@ -218,20 +275,25 @@ devtools::test()   # corre tests/testthat/*.R
 devtools::check()  # R CMD check completo
 ```
 
-Los tests de trigo comparan los resultados contra valores **reales
-cacheados** en `documentacion/referencias/Calculos fenologia y balance
-hidrico.xlsx` (no solo contra las formulas). Los de maiz y soja usan climas
-sinteticos con resultado calculable a mano (ver
-`documentacion/CONTINUIDAD_DESARROLLO.md` para el porque de esta limitacion).
+Los tests de trigo (Pasos 1-4) comparan los resultados contra valores
+**reales cacheados** en la planilla de referencia de CRC-SAS (no solo
+contra las fórmulas), con tolerancia `1e-9` — ver
+`tests/testthat/fixtures/` para el fixture de 428 días del Paso 4. Los de
+maíz y soja (Pasos 1 y 3) usan climas sintéticos con resultado calculable
+a mano (ver `documentacion/FUTURE_WORK.md` para el porqué de esta
+limitación). Los de Paso 5 usan fixtures sintéticos (no hay valores de
+referencia cacheados para esas 3 salidas).
 
 ## Documentacion adicional
 
-- **`documentacion/MANUAL_TECNICO.md`** — como esta implementado cada
-  proceso: formulas, contrato de datos, decisiones de diseno.
-- **`documentacion/CONTINUIDAD_DESARROLLO.md`** — contexto completo del
-  proyecto, historial de decisiones, que falta (Paso 4), y como retomar el
-  desarrollo.
-- **`documentacion/referencias/`** — documentos fuente del metodo (documento
-  maestro, documento de trabajo y planilla de calculo de CRC-SAS, y las
-  respuestas del experto del dominio a las dudas planteadas durante el
-  analisis).
+- **`documentacion/MANUAL_TECNICO.md`** — documento central: cómo está
+  implementado cada proceso (fórmulas exactas, contrato de datos), qué
+  decisiones de diseño se tomaron y por qué, y la historia completa del
+  proyecto (incluida la validación con el experto de dominio de CRC-SAS).
+  Autocontenido: no hace falta ninguna fuente externa para entenderlo.
+- **`documentacion/FUTURE_WORK.md`** — lo que sigue pendiente (no
+  bloqueante): uso de ENSO en el cálculo, límite de días para ciclos
+  largos, script de orquestación batch, fixtures cruzados de maíz/soja,
+  catálogo completo de suelos.
+- **`documentacion/PAPER.md`** — reporte estilo paper sobre el método
+  agronómico-hidrológico implementado, con citas bibliográficas.

@@ -9,10 +9,11 @@
 # hidrico.xlsx (ya verificados contra las respuestas del experto a la
 # Seccion 2A: F-1 a F-7, PR-1, PR-2, KC-1, KC-2).
 #
-# Este archivo cubre unicamente lo que necesitan los Pasos 1-3 (Fenologia,
-# Profundizacion radicular, Curva Kcb). NO incluye parametros del Paso 4
-# (Balance hidrico diario: CN, kl, Um, U, DR, etc.), que todavia no esta
-# especificado.
+# Los parametros de suelo del Paso 4 (Balance hidrico diario: CN, kl, Um, U,
+# DR y horizontes) se agregaron en la seccion `suelos` para el suelo
+# IN64MARC02 (ver mas abajo). Las constantes categoricas de rastrojo y
+# humedad inicial (fijas, no varian por escenario) NO estan aca -- ver
+# `inst/extdata/constantes.yml`.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -25,15 +26,47 @@ estaciones:
     latitud: -32.9036
 
 # -----------------------------------------------------------------------------
-# suelos: solo lo que necesita el Paso 2 (Profundizacion radicular) para topear
-# el crecimiento radicular potencial contra la profundidad maxima del suelo
+# suelos: `profundidad_maxima_m` es lo unico que necesita el Paso 2
+# (Profundizacion radicular) para topear el crecimiento radicular potencial
 # (regla del documento: "hasta la prof. maxima del suelo o el cuaje de granos,
-# lo que ocurra primero" -- ver duda PR-1). El resto de las propiedades del
-# suelo (PMP, CC, Sat, CN, U, DR, kl, Um) pertenecen al Paso 4 y no estan aca.
+# lo que ocurra primero" -- ver duda PR-1). RC00000001 solo tiene ese dato
+# (no hay datos de Paso 4 para ese suelo).
+#
+# IN64MARC02 ademas trae los campos que necesita el Paso 4 (Balance hidrico
+# diario): escalares de suelo (cn, kl, um, u, dr) y 8 horizontes (nombre,
+# pfh_m, pmp, cc, sat). Es el suelo real del fixture de la hoja
+# `balance hídrico` de documentacion/referencias/v3/Calculos fenologia y
+# balance hidrico.xlsx (filas 4-12; Marcos Juarez, Haplustol udico). `pfh_m`
+# ya esta en metros en la fuente v3 (el experto lo corrigio de cm a m).
+#
+# NOTA: el catalogo `suelos` del xlsx (hoja `suelos`, fila 105) para
+# IN64MARC02 solo tiene 7 horizontes (0.2/0.4/0.6/0.9/1.2/1.8/2.1m, sin
+# 1.5m). El fixture de `balance hídrico` usa 8 horizontes, duplicando la
+# ultima fila del catalogo (C2, PMP=0.11/CC=0.25/Sat=0.47) en el horizonte
+# de 1.5m. Se preserva tal cual aparece en el fixture (discrepancia del
+# xlsx, no un error de transcripcion nuestro) para reproducir los valores
+# cacheados exactamente.
 # -----------------------------------------------------------------------------
 suelos:
   RC00000001:
     profundidad_maxima_m: 1.8
+
+  IN64MARC02:
+    profundidad_maxima_m: 2.1
+    cn: 77
+    kl: 0.1
+    um: 0.5
+    u: 8
+    dr: 0.6
+    horizontes:
+      - {nombre: Ap,   pfh_m: 0.2, pmp: 0.15, cc: 0.30, sat: 0.52}
+      - {nombre: B21t, pfh_m: 0.4, pmp: 0.19, cc: 0.33, sat: 0.47}
+      - {nombre: B22t, pfh_m: 0.6, pmp: 0.18, cc: 0.32, sat: 0.45}
+      - {nombre: B3,   pfh_m: 0.9, pmp: 0.15, cc: 0.29, sat: 0.45}
+      - {nombre: C1,   pfh_m: 1.2, pmp: 0.14, cc: 0.28, sat: 0.45}
+      - {nombre: C2,   pfh_m: 1.5, pmp: 0.11, cc: 0.25, sat: 0.47}  # ver nota arriba
+      - {nombre: C2,   pfh_m: 1.8, pmp: 0.11, cc: 0.25, sat: 0.47}
+      - {nombre: C2,   pfh_m: 2.1, pmp: 0.11, cc: 0.25, sat: 0.47}
 
 # -----------------------------------------------------------------------------
 # cultivos: coeficientes fenologicos (Paso 1), de raiz (Paso 2) y de Kcb
