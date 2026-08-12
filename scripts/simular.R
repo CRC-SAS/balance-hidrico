@@ -145,7 +145,7 @@ balance <- calcular_balance_hidrico(
 
 salidas <- calcular_salidas(clima, escenario$siembra, fenologia$hitos, balance$serie_diaria)
 salidas_tabla <- dplyr::bind_cols(
-  tibble::tibble(eventos_lluvia_pre_siembra = salidas$eventos_lluvia_pre_siembra),
+  tibble::tibble(eventos_lluvia_10mm_14a_7d_siembra = salidas$eventos_lluvia_10mm_14a_7d_siembra),
   salidas$estado_hidrico_siembra,
   tibble::tibble(confort_hidrico = salidas$confort_hidrico)
 )

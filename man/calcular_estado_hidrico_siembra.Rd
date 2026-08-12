@@ -12,12 +12,15 @@ calcular_estado_hidrico_siembra(serie_diaria_balance, fecha_siembra)
 \item{fecha_siembra}{Date o \code{"YYYY-MM-DD"}.}
 }
 \value{
-Tibble de 1 fila: \code{au_pct_m1}, \code{au_pct_m2}, \code{au_pct_total},
-\code{sandwich_seco}.
+Tibble de 1 fila: \code{au_pct_m1}, \code{au_pct_m2}, \code{au_pct_total}
+(porcentaje, 0-100), \code{sandwich_seco}.
 }
 \description{
 Extrae el agua util (\%) por metro y la presencia de "sandwich seco" del
 dia de siembra, a partir de la serie diaria del balance hidrico (Paso 4)
 -- son columnas que ya estan calculadas dia a dia en
 \code{\link[=calcular_balance_hidrico]{calcular_balance_hidrico()}}, esto es una seleccion, no una formula nueva.
+\code{au_pct_m1}/\code{au_pct_m2}/\code{au_pct_total} vienen como fraccion 0-1 en
+\code{serie_diaria_balance} (paridad con el xlsx de referencia); esta funcion
+las expresa en porcentaje (x100) para esta salida.
 }

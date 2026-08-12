@@ -248,7 +248,7 @@ calcular_balance_hidrico(clima_estacion, fecha_inicio,
   -> list(serie_diaria = tibble de ~78 columnas, ver seccion 8)
 
 calcular_salidas(clima_estacion, fecha_siembra, hitos, serie_diaria_balance)
-  -> list(eventos_lluvia_pre_siembra, estado_hidrico_siembra, confort_hidrico)
+  -> list(eventos_lluvia_10mm_14a_7d_siembra, estado_hidrico_siembra, confort_hidrico)
 ```
 
 `calcular_balance_hidrico()` recibe `serie_profundidad_radicular`/`serie_kcb`
@@ -761,20 +761,21 @@ fórmulas nuevas — no hay celdas de referencia cacheadas para ninguna de
 las 3 (CRC-SAS las especificó por escrito, no en una planilla de cálculo).
 
 ```
-calcular_eventos_lluvia_pre_siembra(clima_estacion, fecha_siembra)
+calcular_eventos_lluvia_10mm_14a_7d_siembra(clima_estacion, fecha_siembra)
   -> Integer: dias con pp >= 10mm en [fecha_siembra-14, fecha_siembra+7] (ambos extremos incluidos)
 
 calcular_estado_hidrico_siembra(serie_diaria_balance, fecha_siembra)
-  -> Tibble 1 fila: au_pct_m1, au_pct_m2, au_pct_total, sandwich_seco
-     (columnas que YA calcula Paso 4 dia a dia -- esto solo filtra por fecha)
+  -> Tibble 1 fila: au_pct_m1, au_pct_m2, au_pct_total (porcentaje, 0-100),
+     sandwich_seco (columnas que YA calcula Paso 4 dia a dia como fraccion
+     0-1 -- esta funcion filtra por fecha y multiplica por 100)
 
 calcular_confort_hidrico(serie_diaria_balance, hitos)
-  -> Numeric: sum(TrR)/sum(DemT) entre hitos$inicio_periodo_critico y
-     hitos$fin_periodo_critico (ambos extremos incluidos). NA si sum(DemT)=0
-     en la ventana (cociente indefinido).
+  -> Numeric: 100 * sum(TrR)/sum(DemT) entre hitos$inicio_periodo_critico y
+     hitos$fin_periodo_critico (ambos extremos incluidos), porcentaje (0-100
+     en el caso tipico). NA si sum(DemT)=0 en la ventana (cociente indefinido).
 
 calcular_salidas(clima_estacion, fecha_siembra, hitos, serie_diaria_balance)
-  -> list(eventos_lluvia_pre_siembra, estado_hidrico_siembra, confort_hidrico)
+  -> list(eventos_lluvia_10mm_14a_7d_siembra, estado_hidrico_siembra, confort_hidrico)
 ```
 
 ## 10. Utilidades climáticas (`R/utils_clima.R`)

@@ -40,7 +40,7 @@ de datos:
 | 2. Profundización radicular | `calcular_profundidad_radicular()` | `R/profundizacion_radicular.R` |
 | 3. Curva de Kcb | `calcular_curva_kcb()` | `R/curva_kcb.R` |
 | 4. Balance hídrico diario | `calcular_balance_hidrico()` | `R/balance_hidrico.R` |
-| 5. Salidas | `calcular_salidas()` (+ `calcular_eventos_lluvia_pre_siembra()`, `calcular_estado_hidrico_siembra()`, `calcular_confort_hidrico()`) | `R/salidas.R` |
+| 5. Salidas | `calcular_salidas()` (+ `calcular_eventos_lluvia_10mm_14a_7d_siembra()`, `calcular_estado_hidrico_siembra()`, `calcular_confort_hidrico()`) | `R/salidas.R` |
 
 Utilidades compartidas de lectura de datos y cálculo climático:
 
@@ -218,9 +218,9 @@ salidas <- calcular_salidas(
   hitos = fenologia$hitos,
   serie_diaria_balance = balance$serie_diaria
 )
-salidas$eventos_lluvia_pre_siembra  # entero
-salidas$estado_hidrico_siembra      # tibble 1 fila: au_pct_m1, au_pct_m2, au_pct_total, sandwich_seco
-salidas$confort_hidrico             # numeric 0-1
+salidas$eventos_lluvia_10mm_14a_7d_siembra  # entero
+salidas$estado_hidrico_siembra      # tibble 1 fila: au_pct_m1, au_pct_m2, au_pct_total (0-100), sandwich_seco
+salidas$confort_hidrico             # numeric, porcentaje (0-100)
 ```
 
 ## Script de corrida

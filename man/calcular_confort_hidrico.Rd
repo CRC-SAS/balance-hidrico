@@ -13,12 +13,13 @@ calcular_confort_hidrico(serie_diaria_balance, hitos)
 \code{inicio_periodo_critico}, \code{fin_periodo_critico}).}
 }
 \value{
-Numeric (0-1 en el caso tipico). \code{NA_real_} si \code{sum(DemT)} en la
-ventana es 0 (demanda transpirativa nula, cociente indefinido).
+Numeric, porcentaje (0-100 en el caso tipico). \code{NA_real_} si
+\code{sum(DemT)} en la ventana es 0 (demanda transpirativa nula, cociente
+indefinido).
 }
 \description{
-\code{sum(TrR)/sum(DemT)} entre \code{inicio_periodo_critico} y \code{fin_periodo_critico}
-(ambos extremos incluidos), sobre la serie diaria del balance hidrico
-(Paso 4). Es una agregacion pura sobre columnas ya calculadas, no una
-formula nueva.
+\code{100 * sum(TrR)/sum(DemT)} entre \code{inicio_periodo_critico} y
+\code{fin_periodo_critico} (ambos extremos incluidos), sobre la serie diaria
+del balance hidrico (Paso 4). Es una agregacion pura sobre columnas ya
+calculadas, no una formula nueva.
 }

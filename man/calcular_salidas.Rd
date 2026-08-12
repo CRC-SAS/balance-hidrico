@@ -16,8 +16,9 @@ calcular_salidas(clima_estacion, fecha_siembra, hitos, serie_diaria_balance)
 \item{serie_diaria_balance}{Tibble \code{serie_diaria} de \code{\link[=calcular_balance_hidrico]{calcular_balance_hidrico()}}.}
 }
 \value{
-Lista: \code{eventos_lluvia_pre_siembra} (integer),
-\code{estado_hidrico_siembra} (tibble de 1 fila), \code{confort_hidrico} (numeric).
+Lista: \code{eventos_lluvia_10mm_14a_7d_siembra} (integer),
+\code{estado_hidrico_siembra} (tibble de 1 fila, \verb{au_pct_*} en porcentaje),
+\code{confort_hidrico} (numeric, porcentaje).
 }
 \description{
 Junta las 3 salidas del metodo CRC-SAS para un escenario ya simulado
