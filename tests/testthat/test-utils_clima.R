@@ -48,3 +48,36 @@ test_that("calcular_fotoperiodo es aprox. constante en el ecuador todo el anio",
   expect_equal(calcular_fotoperiodo(1, 0), 12.870698612719234, tolerance = 1e-6)
   expect_equal(calcular_fotoperiodo(172, 0), 12.872978863950838, tolerance = 1e-6)
 })
+
+test_that("calcular_eto_hargreaves coincide con evapotranspiracion.hargreaves() del repo balance_agua_suelo", {
+  # Valores cruzados contra balance_agua_suelo/lib/funciones_evapotranspiracion.R
+  # (evapotranspiracion.hargreaves(), Eq. 21-25 y 52 de Allen et al. 1998),
+  # estacion Junin Aero (omm_id 87548, lat -34.5525) -- match exacto (diff 0
+  # en las corridas de referencia), no solo aproximado.
+  expect_equal(
+    calcular_eto_hargreaves(15, -34.5525, tx = 24.6, tn = 16.4, tm = 19.3),
+    4.3236321516945466,
+    tolerance = 1e-9
+  )
+  expect_equal(
+    calcular_eto_hargreaves(196, -34.5525, tx = 12.6, tn = -0.6, tm = 5.3),
+    1.3436964902266195,
+    tolerance = 1e-9
+  )
+  expect_equal(
+    calcular_eto_hargreaves(79, -34.5525, tx = 24.5, tn = 16.8, tm = 19.7),
+    3.0852988979938165,
+    tolerance = 1e-9
+  )
+})
+
+test_that("calcular_eto_hargreaves recalcula tm como (tx+tn)/2 si no se provee (duda F-7)", {
+  con_tm <- calcular_eto_hargreaves(79, -34.5525, tx = 24.5, tn = 16.8, tm = 19.7)
+  sin_tm <- calcular_eto_hargreaves(79, -34.5525, tx = 24.5, tn = 16.8)
+  expect_false(isTRUE(all.equal(con_tm, sin_tm)))
+  expect_equal(sin_tm, calcular_eto_hargreaves(79, -34.5525, tx = 24.5, tn = 16.8, tm = (24.5 + 16.8) / 2))
+})
+
+test_that("calcular_eto_hargreaves da 0 (no NaN) cuando tx == tn", {
+  expect_equal(calcular_eto_hargreaves(79, -34.5525, tx = 20, tn = 20), 0)
+})

@@ -24,7 +24,10 @@ Imports:
     yaml,
     rlang,
     glue,
-    utils
+    utils,
+    stats,
+    stlplus,
+    MASS
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

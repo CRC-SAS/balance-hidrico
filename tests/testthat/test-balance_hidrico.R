@@ -137,3 +137,65 @@ test_that("calcular_balance_hidrico: sandwich seco inicial fuerza 10% AU en hori
   expect_equal(res_sandwich$serie_diaria$ch_2[1], res_normal$serie_diaria$ch_2[1])
   expect_equal(res_sandwich$serie_diaria$ch_3[1], res_normal$serie_diaria$ch_3[1])
 })
+
+test_that("calcular_balance_hidrico soporta suelos con menos de 8 horizontes (segundo metro = horizonte 5 en adelante, hasta 4 -- confirmado por CRC-SAS 2026-08-13, batch Junin/IN65JUNI03)", {
+  entrada <- readr::read_csv(
+    testthat::test_path("fixtures", "balance_hidrico_entrada.csv"),
+    col_types = readr::cols(date = readr::col_date(), pp = readr::col_double(),
+                             eto = readr::col_double(), prof = readr::col_double(),
+                             kcb = readr::col_double())
+  )
+  clima_estacion <- dplyr::select(entrada, "date", "pp", "eto")
+  serie_profundidad_radicular <- tibble::tibble(date = entrada$date, profundidad_radical_m = entrada$prof)
+  serie_kcb <- tibble::tibble(date = entrada$date, kcb = entrada$kcb)
+
+  parametros <- leer_parametros_yaml(system.file("extdata", "parametros_ejemplo.yml", package = "balancehidrico"))
+  suelo_8h <- obtener_suelo_balance_hidrico(parametros, "IN64MARC02")
+  constantes <- leer_constantes_yaml()
+
+  # Suelo sintetico de 5 horizontes (mismos valores fisicos que IN64MARC02
+  # para los horizontes 1-5, sin los horizontes 6-8) -- imita la forma real
+  # de IN65JUNI03 (5 horizontes, hasta 1.2m) sin depender del xlsx externo
+  # de condiciones iniciales del batch de Junin.
+  suelo_5h <- suelo_8h
+  suelo_5h$horizontes <- suelo_8h$horizontes[1:5, ]
+
+  res_8h <- calcular_balance_hidrico(
+    clima_estacion, "1983-03-01", serie_profundidad_radicular, serie_kcb, suelo_8h,
+    rastrojo_clase = "Moderada", humedad_inicial_clase_m1 = "Hu", humedad_inicial_clase_m2 = "Hu",
+    constantes = constantes
+  )
+  res_5h <- calcular_balance_hidrico(
+    clima_estacion, "1983-03-01", serie_profundidad_radicular, serie_kcb, suelo_5h,
+    rastrojo_clase = "Moderada", humedad_inicial_clase_m1 = "Hu", humedad_inicial_clase_m2 = "Hu",
+    constantes = constantes
+  )
+
+  # Primer metro (horizontes 1-4): identico en ambos casos, mismo split de
+  # condicion inicial y mismos horizontes fisicos -- no deberia cambiar por
+  # tener menos horizontes en el segundo metro.
+  expect_equal(res_5h$serie_diaria$ch_1[1], res_8h$serie_diaria$ch_1[1])
+  expect_equal(res_5h$serie_diaria$ch_4[1], res_8h$serie_diaria$ch_4[1])
+  expect_equal(res_5h$serie_diaria$au_pct_m1[1], res_8h$serie_diaria$au_pct_m1[1])
+
+  # Segundo metro: en el suelo de 5 horizontes solo cuenta el horizonte 5
+  # (no 5-8 como en el de 8). El dia 1 es un caso particular: como
+  # .contenido_hidrico_inicial() aplica la MISMA fraccion au_inicial_m2 a
+  # todos los horizontes del segundo metro, el *porcentaje* au_pct_m2 da
+  # exactamente au_inicial_m2 sin importar cuantos horizontes se sumen (por
+  # eso no sirve para distinguir 5 vs 8 horizontes) -- lo que si difiere es
+  # au_mm_m2 (agua util en mm, absoluta), que suma menos horizontes.
+  horiz <- suelo_5h$horizontes
+  espesor_5 <- horiz$pfh_m[5] - horiz$pfh_m[4]
+  pmp5_mm <- horiz$pmp[5] * espesor_5 * 1000
+  cc5_mm <- horiz$cc[5] * espesor_5 * 1000
+  ch5_dia1 <- res_5h$serie_diaria$ch_5[1]
+  au_mm_m2_esperado <- ch5_dia1 - pmp5_mm
+
+  expect_equal(res_5h$serie_diaria$au_mm_m2[1], au_mm_m2_esperado, tolerance = 1e-9)
+  expect_false(isTRUE(all.equal(res_5h$serie_diaria$au_mm_m2[1], res_8h$serie_diaria$au_mm_m2[1])))
+  expect_equal(res_5h$serie_diaria$au_pct_m2[1], 0.90, tolerance = 1e-9)
+
+  # No debe haber columnas de horizontes que no existen en este suelo.
+  expect_false(any(c("ch_6", "ch_7", "ch_8") %in% names(res_5h$serie_diaria)))
+})

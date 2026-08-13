@@ -149,11 +149,15 @@ cuando la cobertura alcanza el 80-85 % y el índice de área foliar ronda 3,0-3,
 es la de FAO-56.
 
 La evapotranspiración de referencia `ETo` es un dato de entrada de la base
-climática y no se calcula dentro del método. Esto desacopla al método de la
-elección del estimador de `ETo` —Penman-Monteith de FAO-56 donde hay datos
-completos, Hargreaves-Samani (Hargreaves & Samani, 1985) donde solo hay
-temperaturas— y permite que la serie de `ETo` sea homogénea con la que el
-CRC-SAS ya produce para otros fines.
+climática y no se calcula dentro del método en sí. Esto desacopla al método
+de la elección del estimador de `ETo` —Penman-Monteith de FAO-56 donde hay
+datos completos, Hargreaves-Samani (Hargreaves & Samani, 1985) donde solo
+hay temperaturas— y permite que la serie de `ETo` sea homogénea con la que
+el CRC-SAS ya produce para otros fines. La implementación de referencia
+incluye, además, una utilidad opcional que estima `ETo` con Hargreaves-Samani
+a partir de temperaturas diarias para los casos en que la base climática no
+la trae ya calculada; sigue sin ser parte del cómputo del balance en sí,
+solo un paso de preparación de datos que puede usarse antes.
 
 ### 2.3 Escorrentía por número de curva
 

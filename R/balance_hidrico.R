@@ -1,16 +1,23 @@
 #' Contenido hidrico inicial por horizonte (dia 1)
 #'
 #' `CH_i = (CC_i - PMP_i) * AU_i + PMP_i`, con `AU_i` (fraccion 0-1) igual a
-#' `au_inicial_m1` para los horizontes 1-4 (hasta 0.9 m) y `au_inicial_m2`
-#' para los horizontes 5-8 (0.9-2.1 m), salvo que `sandwich_seco_inicial`
-#' sea `TRUE`, en cuyo caso el horizonte 4 (0.6-0.9 m) se fuerza a 10% de AU
+#' `au_inicial_m1` para los horizontes 1 a `min(4, n_h)` (primer metro) y
+#' `au_inicial_m2` para el resto (segundo metro, horizonte 5 en adelante),
+#' salvo que `sandwich_seco_inicial` sea `TRUE`, en cuyo caso el horizonte 4
+#' (0.6-0.9 m en el suelo de 8 horizontes del fixture) se fuerza a 10% de AU
 #' fijo, independientemente de `au_inicial_m1` (confirmado por CRC-SAS
-#' 2026-08-01).
+#' 2026-08-01). Para suelos con menos de 8 horizontes (p.ej. `IN65JUNI03`,
+#' 5 horizontes) el segundo metro simplemente tiene menos horizontes -- la
+#' regla "primeros 4 = primer metro, el resto = segundo metro" es general y
+#' no asume una cantidad fija de horizontes (confirmado por CRC-SAS
+#' 2026-08-13, ver tambien la nota en `calcular_balance_hidrico()`).
 #'
 #' @noRd
 .contenido_hidrico_inicial <- function(pmp_mm, cc_mm, au_inicial_m1, au_inicial_m2,
                                         sandwich_seco_inicial) {
-  ini_frac <- c(rep(au_inicial_m1, 4), rep(au_inicial_m2, 4))
+  n_h <- length(pmp_mm)
+  n_m1 <- min(4L, n_h)
+  ini_frac <- c(rep(au_inicial_m1, n_m1), rep(au_inicial_m2, n_h - n_m1))
   if (isTRUE(sandwich_seco_inicial)) ini_frac[4] <- 0.10
   (cc_mm - pmp_mm) * ini_frac + pmp_mm
 }
@@ -154,13 +161,24 @@
 
 #' Balance hidrico diario del suelo (Paso 4)
 #'
-#' Simula dia a dia el contenido hidrico del suelo (8 horizontes) a partir
-#' de la oferta (precipitacion, agua inicial) y la demanda (evapotranspira-
-#' cion potencial ponderada por la curva de Kcb), siguiendo el metodo de
-#' CRC-SAS -- formulas verificadas celda por celda contra la hoja
-#' `balance hídrico` de `documentacion/referencias/v3/Calculos fenologia y
-#' balance hidrico.xlsx`. El calculo es secuencial (el estado de cada dia
-#' depende del dia anterior), no vectorizable entre dias.
+#' Simula dia a dia el contenido hidrico del suelo a partir de la oferta
+#' (precipitacion, agua inicial) y la demanda (evapotranspiracion potencial
+#' ponderada por la curva de Kcb), siguiendo el metodo de CRC-SAS --
+#' formulas verificadas celda por celda contra la hoja `balance hídrico` de
+#' `documentacion/referencias/v3/Calculos fenologia y balance hidrico.xlsx`
+#' (ese fixture usa un suelo de 8 horizontes, pero el numero de horizontes
+#' del suelo es libre -- ver `suelo` mas abajo). El calculo es secuencial
+#' (el estado de cada dia depende del dia anterior), no vectorizable entre
+#' dias.
+#'
+#' `au_mm_m1`/`au_pct_m1` ("primer metro") suman los horizontes 1 a
+#' `min(4, n_h)`; `au_mm_m2`/`au_pct_m2` ("segundo metro") suman el resto,
+#' hasta un maximo de 4 horizontes mas (horizonte `min(4,n_h)+1` a
+#' `min(8, n_h)`) -- confirmado por CRC-SAS 2026-08-13 para suelos con
+#' menos de 8 horizontes (p.ej. un suelo de 5 horizontes tiene primer
+#' metro = horizontes 1-4 y segundo metro = solo el horizonte 5).
+#' Horizontes mas alla del 8 (si los hubiera) no cuentan para ninguno de
+#' los dos metros, aunque si participan del resto del balance dia a dia.
 #'
 #' @param clima_estacion Tibble de una estacion con columnas `date`, `pp`,
 #'   `eto` (ver [leer_clima_csv()]).
@@ -170,8 +188,9 @@
 #'   (curva potencial, Paso 2 -- ver [calcular_profundidad_radicular()]).
 #' @param serie_kcb Tibble `date`, `kcb` (Paso 3 -- ver [calcular_curva_kcb()]).
 #' @param suelo Lista `list(cn, kl, um, u, dr, horizontes)`, con
-#'   `horizontes` un tibble de 8 filas (`nombre`, `pfh_m`, `pmp`, `cc`,
-#'   `sat`) -- ver [obtener_suelo_balance_hidrico()].
+#'   `horizontes` un tibble de `n_h` filas (`nombre`, `pfh_m`, `pmp`, `cc`,
+#'   `sat`) -- ver [obtener_suelo_balance_hidrico()]. `n_h` no esta fijo en
+#'   8 (ver nota sobre `au_mm_m1`/`au_mm_m2` mas arriba).
 #' @param rastrojo_clase Character. Una de `names(constantes$rastrojo)`
 #'   (p.ej. `"Moderada"`).
 #' @param humedad_inicial_clase_m1,humedad_inicial_clase_m2 Character. Una
@@ -189,7 +208,7 @@
 #'   `au_mm_total`, `au_pct_m1`, `au_pct_m2`, `au_pct_total`,
 #'   `sandwich_seco`, `prp_incremento`, `lhpr`, `pre_m`, `at`, `trr`,
 #'   `trrr`, `aef`, `aer`, `er`) mas columnas por horizonte sufijadas
-#'   `_1`..`_8` para `ch`, `at`, `tr`, `chv`, `drenaje_horizonte`, `chf`,
+#'   `_1`..`_n_h` para `ch`, `at`, `tr`, `chv`, `drenaje_horizonte`, `chf`,
 #'   `me`.
 #' @export
 calcular_balance_hidrico <- function(clima_estacion,
@@ -253,10 +272,20 @@ calcular_balance_hidrico <- function(clima_estacion,
   prp_incremento <- lhpr <- pre_m <- numeric(n)
   at_total <- trr <- trrr <- aef <- aer <- er <- numeric(n)
 
-  suma_pmp_m1 <- sum(pmp_mm[1:4])
-  suma_pmp_m2 <- sum(pmp_mm[5:8])
-  suma_cc_m1 <- sum(cc_mm[1:4])
-  suma_cc_m2 <- sum(cc_mm[5:8])
+  # Primer metro = horizontes 1 a min(4, n_h); segundo metro = el resto,
+  # hasta un maximo de 4 horizontes mas (horizonte min(4,n_h)+1 a
+  # min(8, n_h)) -- confirmado por CRC-SAS 2026-08-13 para suelos con menos
+  # de 8 horizontes (p.ej. IN65JUNI03, 5 horizontes: primer metro =
+  # horizontes 1-4, segundo metro = solo el horizonte 5). Horizontes mas
+  # alla del 8 (si los hubiera) no cuentan para ninguno de los dos metros.
+  n_m1 <- min(4L, n_h)
+  idx_m1 <- seq_len(n_m1)
+  idx_m2 <- if (n_h > n_m1) seq(n_m1 + 1L, min(8L, n_h)) else integer(0)
+
+  suma_pmp_m1 <- sum(pmp_mm[idx_m1])
+  suma_pmp_m2 <- sum(pmp_mm[idx_m2])
+  suma_cc_m1 <- sum(cc_mm[idx_m1])
+  suma_cc_m2 <- sum(cc_mm[idx_m2])
   suma_pmp_tot <- sum(pmp_mm)
   suma_cc_tot <- sum(cc_mm)
 
@@ -313,8 +342,8 @@ calcular_balance_hidrico <- function(clima_estacion,
 
     drenaje_profundo[t] <- dr_h_mat[t, n_h] + me_mat[t, n_h]
 
-    au_mm_m1[t] <- sum(ch[t, 1:4]) - suma_pmp_m1
-    au_mm_m2[t] <- sum(ch[t, 5:8]) - suma_pmp_m2
+    au_mm_m1[t] <- sum(ch[t, idx_m1]) - suma_pmp_m1
+    au_mm_m2[t] <- sum(ch[t, idx_m2]) - suma_pmp_m2
     au_mm_total[t] <- au_mm_m1[t] + au_mm_m2[t]
     au_pct_m1[t] <- au_mm_m1[t] / (suma_cc_m1 - suma_pmp_m1)
     au_pct_m2[t] <- au_mm_m2[t] / (suma_cc_m2 - suma_pmp_m2)

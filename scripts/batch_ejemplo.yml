@@ -1,0 +1,36 @@
+# Ejemplo de configuracion para scripts/simular_batch.R.
+#
+# Uso: Rscript scripts/simular_batch.R scripts/batch_ejemplo.yml
+#
+# Las rutas son relativas a la ubicacion de este archivo YAML (no al
+# directorio desde donde se invoca Rscript).
+
+# xlsx con las 6 hojas (estaciones, clima, suelos, horizontes, cultivares,
+# escenarios) para leer_condiciones_iniciales_xlsx(). NO se commitea al repo
+# (dato real de CRC-SAS) -- se espera en la raiz del repo, mismo lugar que
+# observations.csv/stations.csv.
+condiciones_iniciales: ../condiciones_iniciales.xlsx
+
+# Rango de anios de siembra a simular (producto cartesiano con las filas de
+# la hoja 'escenarios'). dda_S (dia del anio de siembra) se combina con cada
+# anio para obtener la fecha de siembra. 2026 excluido a proposito: el clima
+# real de la hoja 'clima' solo llega hasta 2026-08-11 (el resto del anio son
+# filas placeholder con NA).
+anios:
+  desde: 1991
+  hasta: 2025
+
+# fecha_inicio_balance = siembra - offset_inicio_balance_dias, fijo para
+# todo el batch (mismos 90 dias usados en el escenario de referencia,
+# scripts/escenario_ejemplo.yml: siembra 1983-05-30 -> fecha_inicio_balance
+# 1983-03-01).
+offset_inicio_balance_dias: 90
+
+# Semilla para completar_gaps_clima() (relleno estocastico de los pocos
+# dias puntuales sin dato real en la hoja 'clima' -- ver R/imputacion_clima.R).
+# Fija por defecto para que el batch sea reproducible; opcional.
+semilla_imputacion: 1234
+
+salida:
+  outdir: salidas_batch
+  # prefix: opcional; por defecto es "batch"

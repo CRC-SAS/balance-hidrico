@@ -30,8 +30,9 @@ la condicion hidrica inicial).}
 \item{serie_kcb}{Tibble \code{date}, \code{kcb} (Paso 3 -- ver \code{\link[=calcular_curva_kcb]{calcular_curva_kcb()}}).}
 
 \item{suelo}{Lista \code{list(cn, kl, um, u, dr, horizontes)}, con
-\code{horizontes} un tibble de 8 filas (\code{nombre}, \code{pfh_m}, \code{pmp}, \code{cc},
-\code{sat}) -- ver \code{\link[=obtener_suelo_balance_hidrico]{obtener_suelo_balance_hidrico()}}.}
+\code{horizontes} un tibble de \code{n_h} filas (\code{nombre}, \code{pfh_m}, \code{pmp}, \code{cc},
+\code{sat}) -- ver \code{\link[=obtener_suelo_balance_hidrico]{obtener_suelo_balance_hidrico()}}. \code{n_h} no esta fijo en
+8 (ver nota sobre \code{au_mm_m1}/\code{au_mm_m2} mas arriba).}
 
 \item{rastrojo_clase}{Character. Una de \code{names(constantes$rastrojo)}
 (p.ej. \code{"Moderada"}).}
@@ -54,14 +55,27 @@ desde \code{fecha_inicio}, columnas escalares (\code{absi}, \code{esc}, \code{in
 \code{au_mm_total}, \code{au_pct_m1}, \code{au_pct_m2}, \code{au_pct_total},
 \code{sandwich_seco}, \code{prp_incremento}, \code{lhpr}, \code{pre_m}, \code{at}, \code{trr},
 \code{trrr}, \code{aef}, \code{aer}, \code{er}) mas columnas por horizonte sufijadas
-\verb{_1}..\verb{_8} para \code{ch}, \code{at}, \code{tr}, \code{chv}, \code{drenaje_horizonte}, \code{chf},
+\verb{_1}..\verb{_n_h} para \code{ch}, \code{at}, \code{tr}, \code{chv}, \code{drenaje_horizonte}, \code{chf},
 \code{me}.
 }
 \description{
-Simula dia a dia el contenido hidrico del suelo (8 horizontes) a partir
-de la oferta (precipitacion, agua inicial) y la demanda (evapotranspira-
-cion potencial ponderada por la curva de Kcb), siguiendo el metodo de
-CRC-SAS -- formulas verificadas celda por celda contra la hoja
-\verb{balance hídrico} de \verb{documentacion/referencias/v3/Calculos fenologia y balance hidrico.xlsx}. El calculo es secuencial (el estado de cada dia
-depende del dia anterior), no vectorizable entre dias.
+Simula dia a dia el contenido hidrico del suelo a partir de la oferta
+(precipitacion, agua inicial) y la demanda (evapotranspiracion potencial
+ponderada por la curva de Kcb), siguiendo el metodo de CRC-SAS --
+formulas verificadas celda por celda contra la hoja \verb{balance hídrico} de
+\verb{documentacion/referencias/v3/Calculos fenologia y balance hidrico.xlsx}
+(ese fixture usa un suelo de 8 horizontes, pero el numero de horizontes
+del suelo es libre -- ver \code{suelo} mas abajo). El calculo es secuencial
+(el estado de cada dia depende del dia anterior), no vectorizable entre
+dias.
+}
+\details{
+\code{au_mm_m1}/\code{au_pct_m1} ("primer metro") suman los horizontes 1 a
+\code{min(4, n_h)}; \code{au_mm_m2}/\code{au_pct_m2} ("segundo metro") suman el resto,
+hasta un maximo de 4 horizontes mas (horizonte \code{min(4,n_h)+1} a
+\code{min(8, n_h)}) -- confirmado por CRC-SAS 2026-08-13 para suelos con
+menos de 8 horizontes (p.ej. un suelo de 5 horizontes tiene primer
+metro = horizontes 1-4 y segundo metro = solo el horizonte 5).
+Horizontes mas alla del 8 (si los hubiera) no cuentan para ninguno de
+los dos metros, aunque si participan del resto del balance dia a dia.
 }

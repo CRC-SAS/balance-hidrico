@@ -57,23 +57,43 @@ Quedan igual de vigentes aunque esa fuente no este disponible aca.
 
 ## Alcance no implementado (deliberadamente fuera de esta version)
 
-- **Script de orquestacion batch.** `scripts/simular.R` corre **un**
-  escenario puntual (una estacion, un suelo, un cultivo/cultivar, una
-  siembra) y exporta CSV para validacion manual contra la planilla de
-  referencia. No existe
-  todavia una version que corra un **conjunto** de
-  estaciones/suelos/cultivos/cultivares y agregue resultados (climatologia
-  >30 años, reporte por campaña) — es el paso natural para convertir esto
-  en una herramienta operativa, pero su alcance (que agregar, como
-  reportar, si corre distribuido) no esta definido y hay que diseñarlo
-  antes de implementarlo.
+- **Script de orquestacion batch — resuelto (2026-08-13), acotado a una
+  estacion por corrida.** `scripts/simular_batch.R` corre un **conjunto**
+  de suelos/cultivos/cultivares/condiciones iniciales x anios de siembra
+  (una estacion fija por batch) a partir de un xlsx de condiciones
+  iniciales (`scripts/lib_simular.R::leer_condiciones_iniciales_xlsx()`)
+  y acumula resultados en los mismos 4 CSV de siempre + un CSV de
+  errores (ver seccion "Script de corrida batch" del `README.md`).
+  Multi-estacion por batch y agregacion/reporte por campaña siguen sin
+  implementar (quedan para una ronda futura si hace falta).
+  **Limitacion encontrada y resuelta (2026-08-13) con un suelo real de
+  menos de 8 horizontes** (`IN65JUNI03`, 5 horizontes hasta 1.2m):
+  `R/balance_hidrico.R` asumia una estructura fija "primer metro =
+  horizontes 1-4, segundo metro = horizontes 5-8", nunca antes puesta a
+  prueba contra un suelo mas somero. CRC-SAS confirmo la regla general
+  (primer metro = horizontes 1 a `min(4,n_h)`, segundo metro = el resto
+  hasta un maximo de 4 horizontes mas) y se generalizo el codigo (ver
+  seccion 8.11bis de `MANUAL_TECNICO.md`) sin regresion contra el fixture
+  de 8 horizontes.
+  **Limitacion encontrada y resuelta (2026-08-13) con dias puntuales sin
+  dato en la estacion real** (Junin Aero, ~80 dias sin `tx`/`tn`/`tm`/`pp`
+  en 35 anios de serie -- la mayoria de `tm` ya se resolvian solos via
+  `calcular_temperatura_media()`, el resto rompia el balance secuencial):
+  `completar_gaps_clima()` (`R/imputacion_clima.R`, seccion 12bis de
+  `MANUAL_TECNICO.md`) rellena esos huecos con un modelo estocastico
+  (STL + AR(1) estacional para temperaturas, Markov + gamma para
+  precipitacion) antes de correr el batch. Con esto y el fix de suelos,
+  el batch de Junin corre **840/840** sin errores.
 - **Catalogo completo de suelos.** La planilla de referencia de CRC-SAS
   tiene 600+ filas de suelos (multiples series por localidad). Este paquete solo
   tiene cargados en `inst/extdata/parametros_ejemplo.yml` los 2 suelos
   usados en los fixtures de test (`RC00000001` para Paso 2,
-  `IN64MARC02` con datos completos de Paso 4). Convertir el catalogo
-  completo a YAML (o a otro formato de carga) es un problema de
-  transformacion de datos, no de diseño del paquete, pero sigue pendiente.
+  `IN64MARC02` con datos completos de Paso 4); el batch de Junín agrega 3
+  suelos mas (`IN65JUNI01/02/03`) via el xlsx de condiciones iniciales,
+  pero eso sigue siendo especifico de esa localidad, no el catalogo
+  completo. Convertir el catalogo completo a YAML (o a otro formato de
+  carga) es un problema de transformacion de datos, no de diseño del
+  paquete, pero sigue pendiente.
 - **Paso 5 sin completar en el documento de trabajo formal de CRC-SAS.**
   Las 3 salidas estan confirmadas y documentadas en
   `MANUAL_TECNICO.md`, pero en el documento de trabajo original de CRC-SAS

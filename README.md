@@ -268,6 +268,58 @@ desde dónde se invoque. Para correr otro escenario, se copia
 
 Las salidas se escriben por defecto en `salidas/` (ignorado por git).
 
+## Script de corrida batch
+
+`scripts/simular_batch.R` corre los 5 pasos para **múltiples**
+combinaciones de escenario a la vez (una estación fija, varios
+suelos/cultivos/cultivares/condiciones iniciales x varios años de
+siembra) y escribe los mismos cuatro CSV pero **acumulados** (una fila,
+o bloque de filas, por simulación, con columnas identificatorias al
+principio: `id_simulacion`, `escenario`, `cultivo`, `cultivar`,
+`estacion`, `suelo`, `siembra`, `fecha_inicio_balance`,
+`rastrojo_clase`, `humedad_inicial_clase_m1/m2`,
+`sandwich_seco_inicial`), más un quinto CSV (`<prefix>_errores.csv`) con
+las combinaciones que fallaron y su mensaje de error — el batch no
+aborta si una combinación falla, la loggea y sigue con las demás.
+
+```bash
+Rscript scripts/simular_batch.R scripts/batch_ejemplo.yml
+```
+
+El YAML de configuración (ver `scripts/batch_ejemplo.yml`) tiene estas
+claves:
+
+```yaml
+condiciones_iniciales: ../condiciones_iniciales.xlsx  # xlsx de 6 hojas (no commiteado, dato real de CRC-SAS)
+anios:
+  desde: 1991
+  hasta: 2025
+offset_inicio_balance_dias: 90  # fecha_inicio_balance = siembra - N dias, fijo para todo el batch
+semilla_imputacion: 1234  # opcional; default 1234 -- ver completar_gaps_clima()
+salida:
+  outdir: salidas_batch   # default "salidas_batch"
+  # prefix: opcional; default "batch"
+```
+
+El xlsx de `condiciones_iniciales` (6 hojas: `estaciones`, `clima`,
+`suelos`, `horizontes`, `cultivares`, `escenarios`) reemplaza a
+`clima`/`parametros` del escenario puntual — `scripts/lib_simular.R`
+arma en memoria la misma estructura que devolverían
+`leer_clima_csv()`/`leer_parametros_yaml()` a partir de esas hojas (sin
+generar un YAML intermedio en disco). El clima pasa primero por
+`completar_gaps_clima()` (rellena días puntuales sin dato real en la
+estación, ver `R/imputacion_clima.R`) y después por
+`calcular_eto_hargreaves()` (cuando la hoja `clima` no trae `ETo`). El
+grid del batch es el producto cartesiano de las filas de la hoja
+`escenarios` (cada una ya fija suelo + cultivo/cultivar + condición
+inicial) por los años del rango configurado (cada año deriva una fecha
+de siembra distinta a partir del día-del-año de cada fila).
+
+Alcance actual: una sola estación por batch (multi-estación no está
+soportado), y el catálogo de suelos depende enteramente de lo que traiga
+el xlsx (no hay catálogo completo de CRC-SAS cargado — ver
+`documentacion/FUTURE_WORK.md`).
+
 ## Tests
 
 ```r

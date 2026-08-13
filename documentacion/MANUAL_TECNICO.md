@@ -27,6 +27,7 @@ sigue pendiente, ver `FUTURE_WORK.md`. Para cómo usar el paquete, ver el
 10. [Utilidades climáticas](#10-utilidades-climáticas-rutils_climar)
 11. [Entrada/salida y validación](#11-entradasalida-y-validación-rior)
 12. [Testing](#12-testing)
+12bis. [Relleno de gaps climáticos](#12bis-relleno-de-gaps-climáticos-rimputacion_climar-2026-08-13)
 13. [Mapa del repo](#13-mapa-del-repo)
 
 ---
@@ -728,19 +729,66 @@ está bien."* No es un bug, es correcto por construcción.
 original decía `<=30%`; CRC-SAS confirmó que era una errata del texto y
 que la fórmula real (`<30%`) es la correcta.
 
-### 8.10 ETo — no calculada por el paquete (duda BH-3, resuelta ronda 2)
+### 8.10 ETo — dato de entrada, con utilidad opcional para completarla (duda BH-3, resuelta ronda 2; ampliada 2026-08-13)
 
-`Eto` es **dato de entrada** de la base climática (columna `eto` del CSV,
-ver sección 11), no algo que el paquete calcule — no hace falta implementar
-Hargreaves-Samani (Hargreaves & Samani, 1985, ver `PAPER.md`) ni ningún
-otro método de estimación de ETo.
+`Eto` sigue siendo **dato de entrada** de la base climática (columna `eto`
+del CSV, ver sección 11) — `leer_clima_csv()` no cambió, la lee tal cual y
+la deja `NA` si no está en el CSV. El paquete no la calcula como parte del
+método en sí.
+
+Lo que se agregó (2026-08-13) es una utilidad **opcional**,
+`calcular_eto_hargreaves()` (`R/utils_clima.R`), para los casos en que la
+base climática de origen no trae `Eto` ya calculada (p.ej. series de
+estación con solo temperaturas, sin la ETo que CRC-SAS produce
+habitualmente por otros medios). Implementa Hargreaves-Samani (Hargreaves &
+Samani, 1985, ver `PAPER.md`) según las ecuaciones 21-25 y 52 de Allen et
+al. (1998, FAO-56), portada literal de
+`evapotranspiracion.hargreaves()` en
+`balance_agua_suelo/lib/funciones_evapotranspiracion.R` (repo hermano de
+CRC-SAS) — verificado con match exacto (diff 0) contra esa implementación
+para los casos de prueba. Queda a criterio de quien arma la base climática
+(p.ej. un futuro script de preprocesamiento del batch) invocarla para
+completar `eto` antes de pasarle el CSV a `leer_clima_csv()`; no se llama
+automáticamente desde ningún punto del método.
+
+Importante: la declinación solar que usa esta fórmula (ecuación 24 de
+Allen et al. 1998) es **distinta a propósito** de
+[`calcular_declinacion_solar()`] (sección 8, usada para `Fp`) — esa otra
+está calibrada específicamente para el fotoperiodo, con corrección de
+crepúsculo civil confirmada por CRC-SAS para esa fórmula puntual. Son dos
+aproximaciones empíricas válidas de la misma cantidad física pero no
+intercambiables; no unificarlas.
 
 ### 8.11 Discretización de horizontes (duda BH-6, resuelta ronda 2)
 
-El balance usa directamente los 8 horizontes propios de cada suelo (columna
+El balance usa directamente los horizontes propios de cada suelo (columna
 `PFH`), no una grilla fija aparte — resuelve la duda original de si había
 que mapear/interpolar entre una discretización del balance y los horizontes
-del suelo.
+del suelo. El número de horizontes no está fijo en 8: todos los fixtures
+originales de CRC-SAS tienen 8, pero `R/balance_hidrico.R` no lo asume así
+(ver el punto siguiente, "primer/segundo metro" con menos de 8
+horizontes).
+
+### 8.11bis "Primer metro"/"segundo metro" con menos de 8 horizontes (resuelto 2026-08-13, batch Junín)
+
+Al correr el batch de Junín contra `IN65JUNI03` (5 horizontes, hasta
+1.2 m — a diferencia de los 8 horizontes/2.1 m de `IN64MARC02` y del resto
+de los suelos de este catálogo) el código rompía: `au_pct_m1`/`au_pct_m2`
+y la condición inicial (`.contenido_hidrico_inicial()`, `R/balance_hidrico.R`)
+asumían siempre exactamente 4 horizontes para el primer metro y 4 para el
+segundo (índices `1:4` y `5:8` hardcodeados). CRC-SAS confirmó la regla
+general: **primer metro = horizontes 1 a `min(4, n_h)`; segundo metro =
+el resto, hasta un máximo de 4 horizontes más (`min(4,n_h)+1` a
+`min(8, n_h)`)**. Para `IN65JUNI03` eso da primer metro = horizontes 1-4
+(igual que siempre) y segundo metro = solo el horizonte 5 (en vez de 4
+horizontes). Horizontes más allá del 8° (si los hubiera) no cuentan para
+ninguno de los dos metros, aunque sí participan del resto del balance día
+a día (drenaje, agua transpirable, etc., que ya eran genéricos en `n_h`).
+`R/balance_hidrico.R` se generalizó para calcular estos índices a partir
+de `n_h = nrow(suelo$horizontes)` en vez de asumirlos fijos —
+verificado sin regresión contra el fixture de 8 horizontes (tolerancia
+`1e-9` sin cambios) y contra el batch real de Junín (las 4 combinaciones
+de `IN65JUNI03` que antes fallaban ahora corren igual que el resto).
 
 ### 8.12 `DS-3` (forward-fill de escalares de suelo) — no aplica a este esquema
 
@@ -831,7 +879,10 @@ año) con tolerancia `1e-9`.
 
 - `leer_clima_csv(path)`: valida que existan las columnas requeridas
   (`station_id`, `date`, `tx`, `tn`); columnas opcionales `tm`, `pp`, `eto`
-  (`NA_real_` si faltan); agrega `doy`.
+  (`NA_real_` si faltan); agrega `doy`. Si `eto` falta en la fuente,
+  `calcular_eto_hargreaves()` (sección 8.10, `R/utils_clima.R`) puede
+  usarse para completarla antes de leer el CSV con esta función — no está
+  integrada automáticamente acá.
 - `leer_parametros_yaml(path)`: valida que exista la sección `cultivos`.
 - `leer_constantes_yaml(path = <empaquetado>)`: valida que existan las
   secciones `rastrojo` y `humedad_inicial` — único caso del paquete con
@@ -879,18 +930,87 @@ año) con tolerancia `1e-9`.
   directorios no estándar `.claude/`/`scripts/`/`salidas/`, y "unable to
   verify current time" del entorno sandbox).
 
+## 12bis. Relleno de gaps climáticos (`R/imputacion_clima.R`, 2026-08-13)
+
+No es parte del método CRC-SAS — es un paso de preprocesamiento de
+calidad de dato, agregado para el batch de Junín (`condiciones_iniciales.xlsx`
+de Guillermo), cuya estación real tiene días puntuales sin dato en 35
+años de serie. El balance hídrico es secuencial (cada día depende del
+anterior), así que un solo día `NA` invalida el resto del ciclo que lo
+contiene — de ahí la necesidad de completarlos antes de correr el batch,
+en vez de dejarlos fallar.
+
+`completar_gaps_clima(clima, semilla = 1234)` (exportada) solo rellena
+corridas de `NA` **acotadas por dato real de ambos lados** — las que
+llegan hasta el primer o el último día de la serie (p.ej. el resto de un
+año en curso, todavía no observado) quedan intactas a propósito, no son
+huecos.
+
+**Temperaturas (`tx`, `tn`, `tm`) — tratadas de forma conjunta, no como 3
+series independientes** (generarlas por separado podría dar `tn > tx`,
+físicamente imposible y roto para `sqrt(tx-tn)` de
+`calcular_eto_hargreaves()`, ver sección 8.10):
+1. `tx` es la serie "primaria": descomposición STL (`stlplus`, tolera
+   `NA`, a diferencia de `stats::stl()`) → tendencia + estacionalidad;
+   sobre el residuo se ajusta un AR(1) y se genera el valor faltante como
+   una **muestra** (no el promedio) de la distribución condicional a los
+   valores reales inmediatos antes/después del hueco — un suavizado tipo
+   Kalman/RTS con fórmula cerrada (`.ar1_bridge_muestra()`), sin
+   depender de un paquete de Kalman aparte. La varianza de la innovación
+   se escala por trimestre del año (la variabilidad día a día no es
+   constante en el año).
+2. `tn` se **deriva** de `tx`: se modela el rango térmico (`tx-tn`) en
+   escala logarítmica (siempre positivo) con el mismo método, y se
+   calcula `tn = tx_completo - rango_generado` — garantiza `tn < tx` por
+   construcción, incluso el día en que faltan los dos juntos (`tx` ya
+   está completo del paso 1).
+3. Salvaguarda física final (`pmax`/`pmin`) para el único caso que el
+   paso 2 no cubre solo: falta *sólo* `tx` con `tn` real presente ese
+   día. No se dispara con los datos reales de hoy.
+4. `tm` nunca se modela por separado — siempre se deriva al final con
+   `calcular_temperatura_media()` (fórmula exacta ya usada en el resto
+   del paquete, ver sección 10), reutilizando código ya testeado en vez
+   de reinventar algo.
+
+**Precipitación (`pp`)**: modelo de dos partes tipo Richardson (1981,
+WGEN) — ocurrencia vía cadena de Markov de 2 estados (`P(llueve hoy |
+ayer llovió)` vs `P(llueve hoy | ayer seco)`, estimada de toda la serie
+histórica), monto condicional a que llueva vía una distribución gamma
+ajustada por máxima verosimilitud (`MASS::fitdistr`) sobre los días de
+lluvia históricos.
+
+Reproducible (`set.seed(semilla)` al principio, documentado como efecto
+de lado sobre el RNG global). Verificado contra los datos reales de
+Junín: deja 0 `NA` en el registro real, nunca genera `tn > tx` ni
+`pp < 0`, corre en ~0.25s. Tests en `tests/testthat/test-imputacion_clima.R`,
+incluyendo un chequeo numérico independiente del bridge AR(1) (derivación
+analítica vía normal multivariada condicionada, no solo releer la misma
+fórmula secuencial del código de producción).
+
+**Hallazgo relacionado (mismo batch, no es parte de esta función)**:
+`scripts/lib_simular.R::.recortar_clima_escenario()` tenía un margen de
+15 días después de la madurez fisiológica "por las dudas", sin
+justificación real (`calcular_salidas()`, sección 9, solo necesita
+`[siembra-14, siembra+7]` y el período crítico, bien antes de la
+madurez) — para escenarios cuya madurez cae cerca del borde de los datos
+reales (soja 2025, madurez 2026-07-31, corte real 2026-08-11) ese margen
+empujaba la ventana más allá del dato real. Corregido a `margen_dias = 0`.
+
 ## 13. Mapa del repo
 
 ```
 balance-hidrico/
   README.md                          — overview, instalacion, uso
   DESCRIPTION, NAMESPACE, LICENSE     — metadata del paquete R
-  R/                                  — codigo fuente (ver secciones 5-11)
+  R/                                  — codigo fuente (ver secciones 5-11 y 12bis)
   man/                                — documentacion generada (roxygen2)
   tests/testthat/                     — tests automatizados (ver seccion 12)
   inst/extdata/                       — CSV de clima, YAML de parametros y de constantes de ejemplo
   scripts/simular.R                   — corrida de un escenario puntual (Pasos 1-5) -> 4 CSV
   scripts/escenario_ejemplo.yml       — YAML de configuracion de ejemplo para simular.R
+  scripts/simular_batch.R             — corrida batch (multiples escenarios x anios) -> 4 CSV + errores
+  scripts/batch_ejemplo.yml           — YAML de configuracion de ejemplo para simular_batch.R
+  scripts/lib_simular.R               — logica compartida entre simular.R y simular_batch.R
   documentacion/
     MANUAL_TECNICO.md                 — este documento
     FUTURE_WORK.md                    — lo pendiente (no historico, no implementado)

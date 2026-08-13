@@ -66,3 +66,50 @@ calcular_fotoperiodo <- function(dia_anio, latitud) {
 
   7.639 * acos(x)
 }
+
+#' Evapotranspiracion de referencia (ETo), metodo Hargreaves-Samani
+#'
+#' Estima `ETo` (mm/dia) a partir de temperaturas diarias, para cuando la
+#' base climatica no trae `ETo` ya calculada (ver seccion 8.10 del manual
+#' tecnico). Es una utilidad **opcional**: `leer_clima_csv()` sigue leyendo
+#' `eto` como columna de entrada tal cual, sin invocar esta funcion; queda a
+#' criterio de quien arma la base climatica (p.ej. un script de
+#' preprocesamiento) llamarla para completar `eto` cuando no este
+#' disponible.
+#'
+#' Implementa Hargreaves & Samani (1985) segun las ecuaciones 21-25 y 52 de
+#' Allen et al. (1998, FAO-56), portada literal de
+#' `evapotranspiracion.hargreaves()` en
+#' `balance_agua_suelo/lib/funciones_evapotranspiracion.R` (repo hermano de
+#' CRC-SAS). La declinacion solar que usa esta formula (ecuacion 24) es
+#' **distinta a proposito** de [calcular_declinacion_solar()]: esta ultima
+#' esta calibrada para el fotoperiodo (con correccion de crepusculo civil,
+#' confirmada por CRC-SAS para esa formula puntual), no para ETo -- no
+#' unificar ambas.
+#'
+#' @param dia_anio Integer. Dia del anio (1-366).
+#' @param latitud Numeric. Latitud en grados decimales (negativa = hemisferio
+#'   sur).
+#' @param tx Numeric. Temperatura maxima diaria (°C).
+#' @param tn Numeric. Temperatura minima diaria (°C).
+#' @param tm Numeric. Temperatura media diaria (°C), si esta disponible.
+#'   `NA` (el default) indica que no esta disponible y debe recomputarse
+#'   (ver [calcular_temperatura_media()]).
+#'
+#' @return Numeric. `ETo` en mm/dia.
+#' @export
+calcular_eto_hargreaves <- function(dia_anio, latitud, tx, tn, tm = NA_real_) {
+  tm <- calcular_temperatura_media(tx, tn, tm)
+
+  lat_rad <- latitud * pi / 180
+  declinacion <- 0.409 * sin(2 * pi * dia_anio / 365 - 1.39)      # Eq. 24
+  dr <- 1 + 0.033 * cos(2 * pi * dia_anio / 365)                   # Eq. 23
+  ws <- acos(-tan(lat_rad) * tan(declinacion))                     # Eq. 25
+
+  gsc <- 0.0820
+  rad_extraterrestre <- (24 * 60 / pi) * gsc * dr *
+    (ws * sin(lat_rad) * sin(declinacion) + cos(lat_rad) * cos(declinacion) * sin(ws))  # Eq. 21
+
+  lambda <- 2.45
+  0.0023 * (tm + 17.8) * sqrt(tx - tn) * rad_extraterrestre / lambda  # Eq. 52
+}

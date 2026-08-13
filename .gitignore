@@ -48,8 +48,9 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# Salidas generadas por scripts/simular.R
+# Salidas generadas por scripts/simular.R / scripts/simular_batch.R
 /salidas/
+/salidas_batch/
 
 # Documentos de trabajo temporales de CRC-SAS (fuente de MANUAL_TECNICO.md,
 # nunca se suben al repo -- se conservan solo localmente)

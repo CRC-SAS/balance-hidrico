@@ -42,12 +42,7 @@ suppressPackageStartupMessages({
   }
 })
 
-.default_si_null <- function(x, default) if (is.null(x)) default else x
-
-.resolver_ruta <- function(ruta, base_dir) {
-  if (is.null(ruta)) return(NULL)
-  if (grepl("^(/|~|[A-Za-z]:)", ruta)) ruta else file.path(base_dir, ruta)
-}
+source("scripts/lib_simular.R")
 
 # --- 0) Leer YAML de configuracion ------------------------------------------
 
@@ -74,87 +69,29 @@ prefix <- .default_si_null(
   sprintf("%s_%s_%s", escenario$cultivo, escenario$estacion, escenario$siembra)
 )
 
-ruta_clima <- .resolver_ruta(config$clima, config_dir)
-ruta_parametros <- .resolver_ruta(config$parametros, config_dir)
-ruta_constantes <- .resolver_ruta(config$constantes, config_dir)
-
 # --- 1) Leer inputs ---------------------------------------------------------
 
-clima_completo <- leer_clima_csv(ruta_clima)
-clima <- clima_completo[clima_completo$station_id == as.character(escenario$estacion), ]
-if (nrow(clima) == 0) {
-  rlang::abort(sprintf(
-    "No hay datos climaticos para la estacion '%s' en '%s'", escenario$estacion, ruta_clima
-  ))
-}
+inputs <- leer_inputs_comunes(config = config, config_dir = config_dir)
 
-parametros <- leer_parametros_yaml(ruta_parametros)
-p_cultivar <- obtener_parametros_cultivo(parametros, escenario$cultivo, escenario$cultivar)
-profundidad_maxima_suelo <- obtener_profundidad_maxima_suelo(parametros, escenario$suelo)
-suelo_balance <- obtener_suelo_balance_hidrico(parametros, escenario$suelo)
-constantes <- if (is.null(ruta_constantes)) leer_constantes_yaml() else leer_constantes_yaml(ruta_constantes)
+# --- 2-6) Pasos 1-5 -----------------------------------------------------------
 
-# --- 2) Paso 1: Fenologia ---------------------------------------------------
-
-fenologia <- calcular_fenologia(
+resultado <- simular_escenario(
   cultivo = escenario$cultivo,
   cultivar = escenario$cultivar,
-  clima_estacion = clima,
-  fecha_siembra = escenario$siembra,
-  parametros = parametros
-)
-
-# --- 3) Paso 2: Profundizacion radicular ------------------------------------
-
-raices <- calcular_profundidad_radicular(
-  clima_estacion = clima,
-  fecha_emergencia = fenologia$hitos$emergencia,
-  fecha_hito2 = fenologia$hitos$hito2,
-  tb_c = p_cultivar$raiz$tb_c,
-  pr_s_e = p_cultivar$raiz$pr_s_e,
-  pr = p_cultivar$raiz$pr,
-  profundidad_maxima_suelo = profundidad_maxima_suelo
-)
-
-# --- 4) Paso 3: Curva de Kcb ------------------------------------------------
-
-kcb <- calcular_curva_kcb(
-  serie_ut_simple = fenologia$serie_diaria,
-  ut_fkcbini = p_cultivar$ut_e_fkcbini,
-  ut_ikcbmax = p_cultivar$ut_e_ikcbmax,
-  kcb_ini = p_cultivar$kcb$kcb_ini,
-  kcb_max = p_cultivar$kcb$kcb_max
-)
-
-# --- 5) Paso 4: Balance hidrico diario --------------------------------------
-
-balance <- calcular_balance_hidrico(
-  clima_estacion = clima,
-  fecha_inicio = escenario$fecha_inicio_balance,
-  serie_profundidad_radicular = raices,
-  serie_kcb = kcb,
-  suelo = suelo_balance,
+  estacion = escenario$estacion,
+  suelo = escenario$suelo,
+  siembra = escenario$siembra,
+  fecha_inicio_balance = escenario$fecha_inicio_balance,
   rastrojo_clase = escenario$rastrojo_clase,
   humedad_inicial_clase_m1 = escenario$humedad_inicial_clase_m1,
   humedad_inicial_clase_m2 = escenario$humedad_inicial_clase_m2,
-  constantes = constantes,
-  sandwich_seco_inicial = .default_si_null(escenario$sandwich_seco_inicial, FALSE)
+  sandwich_seco_inicial = .default_si_null(escenario$sandwich_seco_inicial, FALSE),
+  clima_completo = inputs$clima_completo,
+  parametros = inputs$parametros,
+  constantes = inputs$constantes
 )
 
-# --- 6) Paso 5: Salidas ------------------------------------------------------
-
-salidas <- calcular_salidas(clima, escenario$siembra, fenologia$hitos, balance$serie_diaria)
-salidas_tabla <- dplyr::bind_cols(
-  tibble::tibble(eventos_lluvia_10mm_14a_7d_siembra = salidas$eventos_lluvia_10mm_14a_7d_siembra),
-  salidas$estado_hidrico_siembra,
-  tibble::tibble(confort_hidrico = salidas$confort_hidrico)
-)
-
-# --- 7) Combinar y escribir salidas ------------------------------------------
-
-serie_diaria <- fenologia$serie_diaria
-serie_diaria <- dplyr::left_join(serie_diaria, raices, by = "date")
-serie_diaria <- dplyr::left_join(serie_diaria, kcb, by = "date")
+# --- 7) Escribir salidas ------------------------------------------------------
 
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
@@ -163,10 +100,10 @@ archivo_serie <- file.path(outdir, paste0(prefix, "_serie_diaria.csv"))
 archivo_balance <- file.path(outdir, paste0(prefix, "_balance_diario.csv"))
 archivo_salidas <- file.path(outdir, paste0(prefix, "_salidas.csv"))
 
-readr::write_csv(fenologia$hitos, archivo_hitos)
-readr::write_csv(serie_diaria, archivo_serie)
-readr::write_csv(balance$serie_diaria, archivo_balance)
-readr::write_csv(salidas_tabla, archivo_salidas)
+readr::write_csv(resultado$hitos, archivo_hitos)
+readr::write_csv(resultado$serie_diaria, archivo_serie)
+readr::write_csv(resultado$balance_diario, archivo_balance)
+readr::write_csv(resultado$salidas_tabla, archivo_salidas)
 
 cat(sprintf(
   "Escenario: cultivo=%s cultivar=%s estacion=%s suelo=%s siembra=%s\n",
