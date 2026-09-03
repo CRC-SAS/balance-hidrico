@@ -1,0 +1,114 @@
+# ============================================================
+# GitHub Actions Workflow
+# Build and Push Docker Images to GHCR
+# Organization is hardcoded as: crc-sas
+#
+# Este repo tiene DOS imagenes (api/Dockerfile, frontend/Dockerfile,
+# ambas con build context = raiz del repo -- ver docker-compose.yml),
+# a diferencia de otros repos de CRC-SAS con una sola imagen. Se
+# construyen las dos en paralelo via matrix, mismo patron de tags/cache
+# que el resto de los repos de la organizacion.
+# ============================================================
+
+name: Build and Push Docker Images
+
+# ------------------------------------------------------------
+# Trigger Conditions
+# ------------------------------------------------------------
+# Este workflow corre cuando hay un push a "main" -- tanto un push
+# directo como el merge commit que genera un PR mergeado a main
+# disparan este mismo evento, no hace falta un trigger separado de
+# pull_request para cubrir "merge de un PR a main".
+on:
+  push:
+    branches:
+      - main
+
+# ------------------------------------------------------------
+# Required Permissions
+# ------------------------------------------------------------
+# contents: read  → required for repository checkout
+# packages: write → required to push Docker images to GHCR
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build and push Docker image (${{ matrix.name }})
+    runs-on: ubuntu-latest  # GitHub-hosted Linux runner
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: api/Dockerfile
+            image: balance-hidrico-api
+          - name: frontend
+            dockerfile: frontend/Dockerfile
+            image: balance-hidrico-frontend
+
+    steps:
+
+      # --------------------------------------------------------
+      # 1️⃣ Checkout repository source code
+      # --------------------------------------------------------
+      # balance_hidrico.sqlite esta commiteada al repo (a diferencia del
+      # xlsx fuente, gitignored) -- ambos Dockerfile la necesitan en el
+      # build context, no hace falta ningun paso extra para traerla.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------------
+      # 2️⃣ Set up Docker Buildx
+      # --------------------------------------------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # --------------------------------------------------------
+      # 3️⃣ Login to GitHub Container Registry (GHCR)
+      # --------------------------------------------------------
+      # Autentica en ghcr.io con el GITHUB_TOKEN autogenerado -- sin
+      # secrets manuales, igual que el resto de los repos de CRC-SAS.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # --------------------------------------------------------
+      # 4️⃣ Build and Push Docker Image
+      # --------------------------------------------------------
+      # Build context = raiz del repo para las dos imagenes (mismo
+      # criterio que docker-compose.yml: ambos Dockerfile necesitan
+      # copiar DESCRIPTION/R/scripts/balance_hidrico.sqlite desde ahi).
+      #
+      # Naming pattern:
+      #   ghcr.io/crc-sas/balance-hidrico-api:latest
+      #   ghcr.io/crc-sas/balance-hidrico-api:<commit-sha>
+      #   ghcr.io/crc-sas/balance-hidrico-frontend:latest
+      #   ghcr.io/crc-sas/balance-hidrico-frontend:<commit-sha>
+      #
+      # Cache por matrix job (scope=matrix.name) para que api/frontend no
+      # compartan/pisen la cache de build del otro.
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./${{ matrix.dockerfile }}
+          push: true
+
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.ref.name=${{ github.ref_name }}
+
+          tags: |
+            ghcr.io/crc-sas/${{ matrix.image }}:latest
+            ghcr.io/crc-sas/${{ matrix.image }}:${{ github.sha }}
+            ghcr.io/crc-sas/${{ matrix.image }}:${{ github.ref_name }}
+
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
