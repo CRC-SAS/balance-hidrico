@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* Paleta/tipografia inspirada en crc-sas.org (main.css): fondo blanco,
+   texto #444, titulos #1b1b1b, acento verde #2eca6a, resalte naranja
+   #F58634, Raleway para titulos + Roboto para el cuerpo. */
+:root {
+  --brand-background: #ffffff;
+  --brand-surface: #f9f9f9;
+  --brand-text: #444444;
+  --brand-heading: #1b1b1b;
+  --brand-accent: #2eca6a;
+  --brand-accent-dark: #239f56;
+  --brand-highlight: #f58634;
+  --brand-border: #e6e6e6;
+}
+
+@theme inline {
+  --color-background: var(--brand-background);
+  --color-surface: var(--brand-surface);
+  --color-text: var(--brand-text);
+  --color-heading: var(--brand-heading);
+  --color-accent: var(--brand-accent);
+  --color-accent-dark: var(--brand-accent-dark);
+  --color-highlight: var(--brand-highlight);
+  --color-border: var(--brand-border);
+  --font-heading: var(--font-raleway);
+  --font-body: var(--font-roboto);
+}
+
+body {
+  background: var(--brand-background);
+  color: var(--brand-text);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading), var(--font-body), sans-serif;
+  color: var(--brand-heading);
+}

@@ -25,6 +25,8 @@ para la herramienta de balance hídrico de cultivos de CRC-SAS.
 - [Configuracion (inputs)](#configuracion-inputs)
 - [Ejemplo de uso](#ejemplo-de-uso)
 - [Script de corrida](#script-de-corrida)
+- [Script de corrida batch](#script-de-corrida-batch)
+- [Plataforma de escenarios individuales](#plataforma-de-escenarios-individuales)
 - [Tests](#tests)
 - [Documentacion adicional](#documentacion-adicional)
 
@@ -319,6 +321,55 @@ Alcance actual: una sola estación por batch (multi-estación no está
 soportado), y el catálogo de suelos depende enteramente de lo que traiga
 el xlsx (no hay catálogo completo de CRC-SAS cargado — ver
 `documentacion/FUTURE_WORK.md`).
+
+## Plataforma de escenarios individuales
+
+Además del batch, hay una plataforma web (API R/plumber + frontend
+Next.js) para correr **un** escenario a la vez desde una interfaz
+gráfica: se elige localidad (que fija la estación y acota los suelos
+disponibles) + suelo + cultivo/cultivar + condiciones iniciales +
+fecha de siembra/monitoreo (solo día y mes, sin año), y la plataforma
+corre ese escenario contra **todos** los años de clima disponibles para
+esa estación, devolviendo las salidas del método agregadas
+(Media/P20/P50/P80/Desvío/IQR por variable).
+
+A diferencia del batch (que lee un xlsx de condiciones iniciales en cada
+corrida), la plataforma usa una base de datos SQLite pre-construida:
+
+```bash
+# 1) Construir la SQLite a partir del catalogo (una vez, o cuando llegue
+#    una version nueva del xlsx de CRC-SAS -- no versionado, ver .gitignore)
+Rscript scripts/construir_base_datos.R base_datos_balance_hidrico.xlsx balance_hidrico.sqlite
+
+# 2) Levantar la plataforma completa (API + frontend)
+docker compose up --build
+# Frontend en http://localhost:3000
+```
+
+- `scripts/construir_base_datos.R` lee las 5 primeras hojas del xlsx de
+  catálogo (`estaciones`, `clima`, `suelos`, `horizontes`, `cultivares`)
+  y escribe `balance_hidrico.sqlite` — **precalculando** `completar_gaps_clima()`
+  y `calcular_eto_hargreaves()` una sola vez (reproducible con
+  `--semilla`, default 1234), para que la API no tenga que recalcularlo
+  en cada consulta. `balance_hidrico.sqlite` sí se versiona (a diferencia
+  del xlsx fuente).
+- `api/` — servicio R/plumber con un único endpoint, `POST /simular`,
+  que corre el escenario contra todos los años disponibles de la
+  estación (reusando `simular_escenario()`/`.recortar_clima_escenario()`
+  de `scripts/lib_simular.R`, sin cambios) y agrega las salidas
+  (`api/agregar_salidas.R`). El paquete se instala formalmente en la
+  imagen (`R CMD INSTALL`), no con `devtools::load_all()`.
+- `frontend/` — Next.js (TypeScript + Tailwind), lee el catálogo
+  (localidades, suelos, cultivares) directo de la SQLite (no le pega a
+  la API para eso) y llama a `POST /simular` solo para disparar la
+  simulación.
+- La fecha de "monitoreo" (`fecha_inicio_balance` del método) se elige
+  libre, independiente de la siembra — si el día-del-año de monitoreo es
+  posterior al de siembra, se asume que cae en el año calendario
+  anterior (`.resolver_anio_monitoreo()` en `scripts/lib_simular.R`).
+- "Sandwich seco" queda **fuera** de las salidas agregadas (es
+  categórica, Sí/No — el criterio de agregación está pendiente de
+  confirmar con CRC-SAS).
 
 ## Tests
 
