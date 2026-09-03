@@ -108,7 +108,9 @@ function(req, res) {
         if (inherits(sim, "error")) {
           errores <- errores + 1L
         } else {
-          salidas_lista[[length(salidas_lista) + 1L]] <- sim$salidas_tabla
+          salidas_lista[[length(salidas_lista) + 1L]] <- dplyr::bind_cols(
+            tibble::tibble(anio = fila$anio), sim$salidas_tabla
+          )
         }
       }
 
@@ -120,7 +122,10 @@ function(req, res) {
       list(
         anios_simulados = length(salidas_lista),
         anios_con_error = errores,
-        salidas = agregar_salidas_multianio(salidas_tabla)
+        salidas = agregar_salidas_multianio(salidas_tabla),
+        # Detalle por anio (sin agregar) para mostrar debajo de la tabla
+        # principal en la UI -- mismas columnas que salidas_tabla, mas `anio`.
+        anios = salidas_tabla[order(salidas_tabla$anio), ]
       )
     },
     error = function(e) e

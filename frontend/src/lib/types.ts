@@ -23,6 +23,16 @@ export interface EstadisticaVariable {
   iqr: number;
 }
 
+export interface AnioResultado {
+  anio: number;
+  eventos_lluvia_10mm_14a_7d_siembra: number;
+  au_pct_m1: number;
+  au_pct_m2: number;
+  au_pct_total: number;
+  sandwich_seco: string;
+  confort_hidrico: number;
+}
+
 export interface ResultadoSimulacion {
   anios_simulados: number;
   anios_con_error: number;
@@ -30,6 +40,7 @@ export interface ResultadoSimulacion {
     siembra: EstadisticaVariable[];
     cultivo: EstadisticaVariable[];
   };
+  anios: AnioResultado[];
 }
 
 export interface ErrorApi {
