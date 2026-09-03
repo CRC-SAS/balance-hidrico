@@ -16,25 +16,25 @@ function TablaAnios({ filas }: { filas: AnioResultado[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-t border-border bg-white text-left text-xs uppercase tracking-wide text-text/70">
-              <th className="px-4 py-2 font-medium">Año</th>
-              <th className="px-4 py-2 font-medium">Eventos de lluvia</th>
-              <th className="px-4 py-2 font-medium">AU 1er metro (%)</th>
-              <th className="px-4 py-2 font-medium">AU 2do metro (%)</th>
-              <th className="px-4 py-2 font-medium">AU total (%)</th>
+              <th className="px-4 py-2 text-right font-medium">Año</th>
+              <th className="px-4 py-2 text-right font-medium">Eventos de lluvia</th>
+              <th className="px-4 py-2 text-right font-medium">AU 1er metro (%)</th>
+              <th className="px-4 py-2 text-right font-medium">AU 2do metro (%)</th>
+              <th className="px-4 py-2 text-right font-medium">AU total (%)</th>
               <th className="px-4 py-2 font-medium">Sandwich seco</th>
-              <th className="px-4 py-2 font-medium">Confort hídrico (%)</th>
+              <th className="px-4 py-2 text-right font-medium">Confort hídrico (%)</th>
             </tr>
           </thead>
           <tbody>
             {filas.map((fila) => (
               <tr key={fila.anio} className="border-t border-border">
-                <td className="px-4 py-2 font-medium text-heading">{fila.anio}</td>
-                <td className="px-4 py-2">{fila.eventos_lluvia_10mm_14a_7d_siembra}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.au_pct_m1)}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.au_pct_m2)}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.au_pct_total)}</td>
+                <td className="px-4 py-2 text-right font-medium text-heading">{fila.anio}</td>
+                <td className="px-4 py-2 text-right">{fila.eventos_lluvia_10mm_14a_7d_siembra}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.au_pct_m1)}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.au_pct_m2)}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.au_pct_total)}</td>
                 <td className="px-4 py-2">{fila.sandwich_seco}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.confort_hidrico)}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.confort_hidrico)}</td>
               </tr>
             ))}
           </tbody>
@@ -56,12 +56,12 @@ function Grupo({ titulo, filas }: { titulo: string; filas: EstadisticaVariable[]
           <thead>
             <tr className="border-t border-border bg-white text-left text-xs uppercase tracking-wide text-text/70">
               <th className="px-4 py-2 font-medium">Variable</th>
-              <th className="px-4 py-2 font-medium">Media</th>
-              <th className="px-4 py-2 font-medium">P20</th>
-              <th className="px-4 py-2 font-medium">P50</th>
-              <th className="px-4 py-2 font-medium">P80</th>
-              <th className="px-4 py-2 font-medium">Desvío</th>
-              <th className="px-4 py-2 font-medium">IQR</th>
+              <th className="px-4 py-2 text-right font-medium">Media</th>
+              <th className="px-4 py-2 text-right font-medium">P20</th>
+              <th className="px-4 py-2 text-right font-medium">P50</th>
+              <th className="px-4 py-2 text-right font-medium">P80</th>
+              <th className="px-4 py-2 text-right font-medium">Desvío</th>
+              <th className="px-4 py-2 text-right font-medium">IQR</th>
             </tr>
           </thead>
           <tbody>
@@ -70,12 +70,12 @@ function Grupo({ titulo, filas }: { titulo: string; filas: EstadisticaVariable[]
                 <td className="px-4 py-2 text-text">
                   {VARIABLE_SALIDA_LABELS[fila.variable] ?? fila.variable}
                 </td>
-                <td className="px-4 py-2 font-medium text-heading">{formatearNumero(fila.media)}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.p20)}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.p50)}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.p80)}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.desvio)}</td>
-                <td className="px-4 py-2">{formatearNumero(fila.iqr)}</td>
+                <td className="px-4 py-2 text-right font-medium text-heading">{formatearNumero(fila.media)}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.p20)}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.p50)}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.p80)}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.desvio)}</td>
+                <td className="px-4 py-2 text-right">{formatearNumero(fila.iqr)}</td>
               </tr>
             ))}
           </tbody>
