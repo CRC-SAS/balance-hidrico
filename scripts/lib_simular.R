@@ -303,6 +303,87 @@ construir_grid_batch <- function(escenarios, estacion, anio_desde, anio_hasta, o
   grid
 }
 
+# --- Escenario individual (api/plumber.R) ------------------------------------
+
+# Determina en que anio calendario cae la fecha de monitoreo de un
+# escenario individual (plataforma), dado que se especifica como
+# (mes,dia) independiente de la siembra: si el monitoreo cae "despues" de
+# la siembra dentro del calendario (mismo criterio que dda_M > dda_S en
+# el xlsx original), el monitoreo pertenece al anio anterior al de la
+# siembra; si no, al mismo anio. La comparacion se hace en un anio de
+# referencia fijo NO bisiesto (2001) -- solo para decidir el cruce de
+# anio, no para construir la fecha real (eso lo hace
+# construir_grid_escenario_individual() directo desde (anio,mes,dia)).
+.resolver_anio_monitoreo <- function(mes_siembra, dia_siembra, mes_monitoreo, dia_monitoreo, anio_siembra) {
+  doy_siembra <- lubridate::yday(as.Date(sprintf("2001-%02d-%02d", mes_siembra, dia_siembra)))
+  doy_monitoreo <- lubridate::yday(as.Date(sprintf("2001-%02d-%02d", mes_monitoreo, dia_monitoreo)))
+  if (doy_monitoreo > doy_siembra) anio_siembra - 1L else anio_siembra
+}
+
+# Arma el grid de UN escenario individual (plataforma) -- a diferencia de
+# construir_grid_batch(), no sale de la hoja `escenarios` del xlsx, lo
+# arma un usuario desde el frontend -- cruzado contra todos los anios de
+# clima disponibles de la estacion (`anios_disponibles`). A diferencia de
+# construir_grid_batch() (que usa dda_S + un offset fijo en dias), esta
+# funcion recibe mes/dia de siembra y monitoreo por separado y arma las
+# fechas directo con as.Date(sprintf("%d-%02d-%02d", ...)) por anio -- asi
+# "1 de junio" es siempre 1 de junio, sin el corrimiento de un dia que
+# tendria hacer aritmetica de dia-del-anio en anios bisiestos.
+construir_grid_escenario_individual <- function(estacion, suelo, cultivo, cultivar,
+                                                  mes_siembra, dia_siembra,
+                                                  mes_monitoreo, dia_monitoreo,
+                                                  rastrojo_clase,
+                                                  humedad_inicial_clase_m1,
+                                                  humedad_inicial_clase_m2,
+                                                  sandwich_seco_inicial,
+                                                  anios_disponibles) {
+  anios <- as.integer(sort(unique(anios_disponibles)))
+  siembra <- as.Date(sprintf("%d-%02d-%02d", anios, mes_siembra, dia_siembra))
+  anio_monitoreo <- vapply(anios, function(a) {
+    .resolver_anio_monitoreo(mes_siembra, dia_siembra, mes_monitoreo, dia_monitoreo, a)
+  }, integer(1))
+  fecha_inicio_balance <- as.Date(sprintf("%d-%02d-%02d", anio_monitoreo, mes_monitoreo, dia_monitoreo))
+
+  tibble::tibble(
+    id_simulacion = sprintf("anio%d", anios),
+    anio = anios,
+    estacion = estacion,
+    suelo = suelo,
+    cultivo = cultivo,
+    cultivar = cultivar,
+    siembra = siembra,
+    fecha_inicio_balance = fecha_inicio_balance,
+    rastrojo_clase = rastrojo_clase,
+    humedad_inicial_clase_m1 = humedad_inicial_clase_m1,
+    humedad_inicial_clase_m2 = humedad_inicial_clase_m2,
+    sandwich_seco_inicial = sandwich_seco_inicial
+  )
+}
+
+# Lee la tabla `clima` de la SQLite de la plataforma (ver
+# scripts/construir_base_datos.R) para una estacion y la da vuelta a la
+# forma que espera simular_escenario() -- station_id/date/doy/tx/tn/tm/pp/eto.
+# La SQLite ya viene con gaps rellenados y eto precalculada (ver
+# construir_base_datos.R) -- no se reimputa ni se recalcula aca.
+leer_clima_estacion_sqlite <- function(con, omm_id) {
+  clima_raw <- DBI::dbGetQuery(
+    con, "SELECT * FROM clima WHERE omm_id = ? ORDER BY fecha", params = list(omm_id)
+  )
+  if (nrow(clima_raw) == 0) {
+    rlang::abort(sprintf("No hay datos climaticos para la estacion '%s' en la SQLite", omm_id))
+  }
+  tibble::tibble(
+    station_id = as.character(clima_raw$omm_id),
+    date = as.Date(clima_raw$fecha),
+    doy = lubridate::yday(date),
+    tx = clima_raw$tmax,
+    tn = clima_raw$tmin,
+    tm = clima_raw$tmed,
+    pp = clima_raw$prcp,
+    eto = clima_raw$eto
+  )
+}
+
 # Recorta el clima de una estacion a la ventana [fecha_inicio_balance,
 # madurez_fisiologica + margen] de un escenario puntual. Solo lo usa
 # scripts/simular_batch.R -- simular_escenario()/scripts/simular.R siguen
@@ -322,16 +403,43 @@ construir_grid_batch <- function(escenarios, estacion, anio_desde, anio_hasta, o
     cultivo = cultivo, cultivar = cultivar, clima_estacion = clima_estacion,
     fecha_siembra = siembra, parametros = parametros
   )
-  # margen_dias = 0: calcular_salidas() (Paso 5) solo necesita
-  # [siembra-14, siembra+7] (calcular_eventos_lluvia_10mm_14a_7d_siembra())
-  # y el periodo critico (bien antes de la madurez fisiologica) -- no hace
-  # falta clima despues de la madurez. Un margen positivo puede empujar la
+  siembra <- as.Date(siembra)
+  fecha_inicio_balance <- as.Date(fecha_inicio_balance)
+
+  # calcular_salidas() (Paso 5) necesita clima desde siembra-14
+  # (calcular_eventos_lluvia_10mm_14a_7d_siembra()) sin importar donde
+  # arranca el balance -- calcular_balance_hidrico()/calcular_fenologia()
+  # filtran internamente por su propia fecha de inicio (>= fecha_inicio /
+  # >= fecha_siembra), asi que incluir filas de mas antes no cambia su
+  # resultado. En el batch original fecha_inicio_balance (offset fijo de
+  # 90 dias) siempre esta muy por delante de siembra-14, pero en la
+  # plataforma el usuario elige "fecha de monitoreo" libremente y puede
+  # quedar a menos de 14 dias de la siembra -- sin este min(), el conteo
+  # de eventos de lluvia pre-siembra quedaria incompleto sin ningun error.
+  fecha_inicio <- min(fecha_inicio_balance, siembra - 14)
+
+  # margen_dias = 0: no hace falta clima despues de la madurez fisiologica
+  # para las salidas de Paso 5. Un margen positivo puede empujar la
   # ventana mas alla del limite real de datos para escenarios cuya madurez
   # cae cerca del borde (encontrado con el batch real: escenarios de soja
   # 2025 con madurez 2026-07-31, margen de 15 dias los empujaba a
   # 2026-08-15, mas alla del corte real de 2026-08-11).
   fecha_fin <- fenologia_preliminar$hitos$madurez_fisiologica + margen_dias
-  clima_estacion[
-    clima_estacion$date >= as.Date(fecha_inicio_balance) & clima_estacion$date <= fecha_fin,
-  ]
+
+  # Si la ventana pedida excede el rango de clima realmente disponible,
+  # fallar explicito en vez de devolver una ventana truncada en silencio
+  # (encontrado con la plataforma: un anio de siembra en el borde del
+  # rango de la estacion, combinado con un monitoreo que cruza al anio
+  # anterior -- ver .resolver_anio_monitoreo() -- puede pedir una fecha de
+  # inicio anterior al primer dato real de la estacion; sin este chequeo
+  # la simulacion corria igual, con menos dias de "spin-up" de los
+  # pedidos, sin ningun aviso).
+  if (fecha_inicio < min(clima_estacion$date) || fecha_fin > max(clima_estacion$date)) {
+    rlang::abort(sprintf(
+      "La ventana de simulacion [%s, %s] excede el rango de clima disponible [%s, %s]",
+      fecha_inicio, fecha_fin, min(clima_estacion$date), max(clima_estacion$date)
+    ))
+  }
+
+  clima_estacion[clima_estacion$date >= fecha_inicio & clima_estacion$date <= fecha_fin, ]
 }
