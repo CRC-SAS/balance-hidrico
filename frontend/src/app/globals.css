@@ -12,6 +12,8 @@
   --brand-accent-dark: #239f56;
   --brand-highlight: #f58634;
   --brand-border: #e6e6e6;
+  /* Azul del header de crc-sas.org (.header { background-color: #002060 }) */
+  --brand-header-bg: #002060;
 }
 
 @theme inline {
@@ -23,22 +25,30 @@
   --color-accent-dark: var(--brand-accent-dark);
   --color-highlight: var(--brand-highlight);
   --color-border: var(--brand-border);
+  --color-header: var(--brand-header-bg);
   --font-heading: var(--font-raleway);
   --font-body: var(--font-roboto);
 }
 
-body {
-  background: var(--brand-background);
-  color: var(--brand-text);
-  font-family: var(--font-body), system-ui, sans-serif;
-}
+/* Dentro de @layer base para que las utilidades de Tailwind (ej.
+   text-white en el h1 del header) puedan pisar estos defaults -- una
+   regla suelta fuera de cualquier @layer siempre le gana a una regla
+   dentro de un layer, sin importar especificidad (CSS Cascade Layers),
+   lo que rompia el texto blanco del header sobre fondo azul. */
+@layer base {
+  body {
+    background: var(--brand-background);
+    color: var(--brand-text);
+    font-family: var(--font-body), system-ui, sans-serif;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-heading), var(--font-body), sans-serif;
-  color: var(--brand-heading);
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading), var(--font-body), sans-serif;
+    color: var(--brand-heading);
+  }
 }
