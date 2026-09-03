@@ -59,3 +59,9 @@ rsconnect/
 # Dispositivo grafico nulo que crea Rscript al correr codigo de ggplot2/grid
 # fuera de una sesion interactiva (p.ej. documentacion/figuras/generar_figuras.R)
 /Rplots.pdf
+
+# Catalogo fuente de la plataforma (estaciones/clima/suelos/horizontes/
+# cultivares/escenarios/equivalencias/UI). Material de trabajo de CRC-SAS,
+# no se versiona -- lo que se versiona es la SQLite derivada
+# (balance_hidrico.sqlite, generada con scripts/construir_base_datos.R).
+/base_datos_balance_hidrico.xlsx
