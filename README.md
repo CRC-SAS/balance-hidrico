@@ -331,7 +331,9 @@ disponibles) + suelo + cultivo/cultivar + condiciones iniciales +
 fecha de siembra/monitoreo (solo día y mes, sin año), y la plataforma
 corre ese escenario contra **todos** los años de clima disponibles para
 esa estación, devolviendo las salidas del método agregadas
-(Media/P20/P50/P80/Desvío/IQR por variable).
+(Media/P20/P50/P80/Desvío/IQR por variable) más el detalle de cada año
+simulado por separado, en una tabla debajo de las estadísticas
+agregadas.
 
 A diferencia del batch (que lee un xlsx de condiciones iniciales en cada
 corrida), la plataforma usa una base de datos SQLite pre-construida:
@@ -356,13 +358,15 @@ docker compose up --build
 - `api/` — servicio R/plumber con un único endpoint, `POST /simular`,
   que corre el escenario contra todos los años disponibles de la
   estación (reusando `simular_escenario()`/`.recortar_clima_escenario()`
-  de `scripts/lib_simular.R`, sin cambios) y agrega las salidas
-  (`api/agregar_salidas.R`). El paquete se instala formalmente en la
-  imagen (`R CMD INSTALL`), no con `devtools::load_all()`.
+  de `scripts/lib_simular.R`, sin cambios) y devuelve tanto las salidas
+  agregadas (`api/agregar_salidas.R`) como el detalle sin agregar de
+  cada año (`anios`). El paquete se instala formalmente en la imagen
+  (`R CMD INSTALL`), no con `devtools::load_all()`.
 - `frontend/` — Next.js (TypeScript + Tailwind), lee el catálogo
   (localidades, suelos, cultivares) directo de la SQLite (no le pega a
   la API para eso) y llama a `POST /simular` solo para disparar la
-  simulación.
+  simulación. Muestra las estadísticas agregadas y, debajo, una tabla
+  con el detalle por año.
 - La fecha de "monitoreo" (`fecha_inicio_balance` del método) se elige
   libre, independiente de la siembra — si el día-del-año de monitoreo es
   posterior al de siembra, se asume que cae en el año calendario
