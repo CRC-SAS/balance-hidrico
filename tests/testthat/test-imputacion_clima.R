@@ -67,8 +67,11 @@ test_that("completar_gaps_clima rellena huecos internos y deja intactos los que 
   expect_false(any(is.na(relleno$tx[1000:1001])))
   expect_false(is.na(relleno$pp[1500]))
 
-  # La corrida que toca el borde queda intacta.
+  # La corrida que toca el borde queda intacta -- y el tn REAL de esos
+  # mismos dias no se pierde (regresion: pmax()/pmin() sin condicionar a
+  # "ambos no-NA" devolvia NA en tn ahi tambien, ver mas abajo).
   expect_true(all(is.na(relleno$tx[(n - 4):n])))
+  expect_equal(relleno$tn[(n - 4):n], clima$tn[(n - 4):n])
 
   # No quedan NA en los huecos internos de ninguna columna.
   huecos_internos <- setdiff(seq_len(n), (n - 4):n)
@@ -111,6 +114,24 @@ test_that("completar_gaps_clima garantiza consistencia fisica (tx >= tn, pp >= 0
     (relleno$tx[800:802] + relleno$tn[800:802]) / 2,
     tolerance = 1e-9
   )
+})
+
+test_that("completar_gaps_clima no borra un lado real cuando el otro tiene un hueco de borde largo", {
+  # Encontrado con datos reales multi-estacion (base_datos_balance_hidrico.xlsx,
+  # estacion 87688): tn no se empezo a registrar hasta 59 dias despues que
+  # tx, en el arranque de la serie. La salvaguarda fisica pmax()/pmin() sin
+  # condicionar a "ambos no-NA" devolvia NA para tx en TODO ese tramo,
+  # borrando 59 dias de tx real que no tenian nada de malo.
+  clima <- .clima_sintetico()
+  n_hueco <- 59
+  clima$tn[1:n_hueco] <- NA
+
+  relleno <- completar_gaps_clima(clima, semilla = 123)
+
+  # tn queda intacto (hueco de borde, no se inventa) y tx -- que SI tenia
+  # dato real esos dias -- no se pierde.
+  expect_true(all(is.na(relleno$tn[1:n_hueco])))
+  expect_equal(relleno$tx[1:n_hueco], clima$tx[1:n_hueco])
 })
 
 test_that("completar_gaps_clima es reproducible con la misma semilla y distinto con otra", {

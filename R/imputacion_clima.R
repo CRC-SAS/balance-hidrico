@@ -91,11 +91,16 @@
 #     usa ese rango generado + el tx ya completo (paso 1) para resolver
 #     tn en sus huecos -- garantiza tn < tx por construccion, incluso el
 #     dia en que faltaban los dos (tx ya esta completo del paso 1).
-#  3) Salvaguarda fisica tx >= tn (pmax/pmin) para el unico caso que el
-#     paso 2 no cubre por si solo: falta SOLO tx con tn real presente ese
-#     dia (tx se genero sin conocer ese tn real). No deberia dispararse
-#     con los datos reales de hoy (0 huecos de tx), es una red de
-#     seguridad.
+#  3) Salvaguarda fisica tx >= tn (pmax/pmin) para el caso en que el paso
+#     2 no alcanza por si solo: falta SOLO tx con tn real presente ese dia
+#     (tx se genero sin conocer ese tn real). Se aplica UNICAMENTE donde
+#     tx y tn quedaron los dos con valor (real o generado) -- si alguno
+#     sigue en NA (hueco de borde de serie, ver completar_gaps_clima()),
+#     se preserva tal cual en vez de contaminarlo con pmax()/pmin() (que
+#     sin na.rm devuelven NA apenas un lado es NA, borrando un dato real
+#     del otro lado). Encontrado con datos reales multi-estacion: una
+#     estacion puede tener tx real pero tn recien empieza a registrarse
+#     mas adelante (huecos de tx/tn no simetricos en el borde inicial).
 #  4) tm nunca se modela por separado -- siempre se deriva al final con
 #     calcular_temperatura_media(tx, tn, tm), la formula exacta que ya
 #     usa el resto del paquete. Resuelve de paso el caso "faltan los
@@ -120,8 +125,11 @@
     }
   }
 
-  tx_final <- pmax(tx, tn)
-  tn_final <- pmin(tx, tn)
+  ambos <- !is.na(tx) & !is.na(tn)
+  tx_final <- tx
+  tn_final <- tn
+  tx_final[ambos] <- pmax(tx[ambos], tn[ambos])
+  tn_final[ambos] <- pmin(tx[ambos], tn[ambos])
   tm_final <- calcular_temperatura_media(tx_final, tn_final, tm)
 
   list(tx = tx_final, tn = tn_final, tm = tm_final)
