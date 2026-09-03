@@ -21,8 +21,8 @@
 #   condiciones_iniciales: ruta al xlsx (relativa a la ubicacion del propio
 #                           YAML si no es absoluta).
 #   anios: desde, hasta (anios de siembra a simular).
-#   offset_inicio_balance_dias: fecha_inicio_balance = siembra - N dias,
-#                                fijo para todo el batch.
+#   offset_inicio_balance_dias: obligatorio (sin default). fecha_inicio_balance
+#                                = siembra - N dias, fijo para todo el batch.
 #   salida: outdir (default "salidas_batch") y prefix opcional (default
 #           "batch").
 
@@ -56,7 +56,10 @@ if (is.null(config$condiciones_iniciales)) {
 if (is.null(config$anios) || is.null(config$anios$desde) || is.null(config$anios$hasta)) {
   rlang::abort("El YAML de configuracion no tiene la clave 'anios' (con 'desde'/'hasta')")
 }
-offset_dias <- .default_si_null(config$offset_inicio_balance_dias, 90)
+if (is.null(config$offset_inicio_balance_dias)) {
+  rlang::abort("El YAML de configuracion no tiene la clave 'offset_inicio_balance_dias'")
+}
+offset_dias <- config$offset_inicio_balance_dias
 semilla_imputacion <- .default_si_null(config$semilla_imputacion, 1234)
 
 salida <- .default_si_null(config$salida, list())

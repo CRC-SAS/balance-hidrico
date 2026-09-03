@@ -21,9 +21,10 @@ anios:
   hasta: 2025
 
 # fecha_inicio_balance = siembra - offset_inicio_balance_dias, fijo para
-# todo el batch (mismos 90 dias usados en el escenario de referencia,
-# scripts/escenario_ejemplo.yml: siembra 1983-05-30 -> fecha_inicio_balance
-# 1983-03-01).
+# todo el batch. Obligatorio, sin default en el codigo -- 90 es el valor
+# usado en el escenario de referencia (scripts/escenario_ejemplo.yml:
+# siembra 1983-05-30 -> fecha_inicio_balance 1983-03-01), no una constante
+# del metodo.
 offset_inicio_balance_dias: 90
 
 # Semilla para completar_gaps_clima() (relleno estocastico de los pocos
