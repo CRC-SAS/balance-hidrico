@@ -1,0 +1,19 @@
+# Override para desarrollo local: construye las imagenes desde el
+# codigo fuente (api/Dockerfile, frontend/Dockerfile) en vez de usar las
+# publicadas en GHCR por docker-compose.yml. Docker Compose, al ver
+# "image" (heredado del archivo base) y "build" (de este override) para
+# el mismo servicio, construye la imagen localmente y la tagea con ese
+# nombre -- no la publica a ningun lado.
+#
+# Uso (desde la raiz del repo):
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
