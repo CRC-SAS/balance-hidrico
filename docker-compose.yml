@@ -2,24 +2,26 @@
 # /home/santiago/.claude/plans/atomic-roaming-wadler.md para el diseno
 # completo.
 #
-# Uso (desde la raiz del repo, con balance_hidrico.sqlite presente):
-#   docker compose up --build
+# Usa las imagenes publicadas en GHCR por .github/workflows/build.yml
+# (build y push en cada push a main) -- no construye nada localmente.
+#
+# Uso (desde la raiz del repo):
+#   docker compose up
 # Frontend en http://localhost:3000 -- la API (puerto 8000) no se publica
 # al host, solo es alcanzable desde el frontend via la red interna de
 # compose (API_URL=http://api:8000).
+#
+# Para desarrollo local con las imagenes construidas desde el codigo
+# fuente en vez de las publicadas, ver docker-compose.dev.yml.
 services:
   api:
-    build:
-      context: .
-      dockerfile: api/Dockerfile
+    image: ghcr.io/crc-sas/balance-hidrico-api:latest
     expose:
       - "8000"
     restart: unless-stopped
 
   frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
+    image: ghcr.io/crc-sas/balance-hidrico-frontend:latest
     ports:
       - "3000:3000"
     environment:
