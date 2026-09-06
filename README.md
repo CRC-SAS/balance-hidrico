@@ -340,12 +340,20 @@ corrida), la plataforma usa una base de datos SQLite pre-construida:
 
 ```bash
 # 1) Construir la SQLite a partir del catalogo (una vez, o cuando llegue
-#    una version nueva del xlsx de CRC-SAS -- no versionado, ver .gitignore)
+#    una version nueva del xlsx/clima de CRC-SAS -- no versionados, ver
+#    .gitignore)
 Rscript scripts/construir_base_datos.R base_datos_balance_hidrico.xlsx balance_hidrico.sqlite
 
-# 2) Levantar la plataforma completa (API + frontend)
-docker compose up --build
-# Frontend en http://localhost:3000
+# 1b) El clima (lo que mas seguido se actualiza) puede venir de un CSV
+#     aparte en vez de la hoja "clima" del xlsx -- mismas columnas
+#     (omm_id, date, tmax, tmin, tmed, prcp):
+Rscript scripts/construir_base_datos.R base_datos_balance_hidrico.xlsx balance_hidrico.sqlite --clima observations.csv
+
+# 2) Levantar la plataforma completa (API + frontend), imagenes publicadas en GHCR
+docker compose up
+# Frontend en http://localhost:3000. Para construir desde el codigo
+# fuente en vez de usar las imagenes publicadas (desarrollo local):
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 - `scripts/construir_base_datos.R` lee las 5 primeras hojas del xlsx de
@@ -354,7 +362,9 @@ docker compose up --build
   y `calcular_eto_hargreaves()` una sola vez (reproducible con
   `--semilla`, default 1234), para que la API no tenga que recalcularlo
   en cada consulta. `balance_hidrico.sqlite` sí se versiona (a diferencia
-  del xlsx fuente).
+  del xlsx fuente). El clima puede venir de un CSV aparte (`--clima`) en
+  vez de la hoja del xlsx, para no tener que tocar el resto del catálogo
+  cada vez que llega una serie nueva.
 - `api/` — servicio R/plumber con un único endpoint, `POST /simular`,
   que corre el escenario contra todos los años disponibles de la
   estación (reusando `simular_escenario()`/`.recortar_clima_escenario()`
