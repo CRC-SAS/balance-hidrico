@@ -4,7 +4,7 @@
 # tx-tn), y precipitacion Markov+gamma conocida -- no son datos reales,
 # son series generadas a mano con parametros elegidos para poder verificar
 # que completar_gaps_clima() hace lo esperado (mismo criterio que los
-# climas sinteticos de maiz/soja en Pasos 1 y 3, ver FUTURE_WORK.md).
+# climas sinteticos de maiz/soja en Pasos 1 y 3, solo trigo tiene fixture de referencia).
 # -----------------------------------------------------------------------------
 
 .clima_sintetico <- function(semilla_datos = 42, n_anios = 6) {

@@ -1,5 +1,5 @@
-# Imagen de la API R/plumber de la plataforma de escenarios individuales
-# (ver /home/santiago/.claude/plans/atomic-roaming-wadler.md). El paquete
+# Imagen de la API R/plumber de la plataforma de escenarios individuales.
+# El paquete
 # balancehidrico se instala formalmente (R CMD INSTALL), no
 # devtools::load_all() -- decision explicita para el container de
 # produccion.

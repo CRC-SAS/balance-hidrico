@@ -1,5 +1,5 @@
-# Imagen del frontend Next.js de la plataforma de escenarios individuales
-# (ver /home/santiago/.claude/plans/atomic-roaming-wadler.md). Base
+# Imagen del frontend Next.js de la plataforma de escenarios individuales.
+# Base
 # Debian (no alpine) para evitar problemas de compatibilidad glibc/musl
 # con better-sqlite3 (addon nativo). Node 22 -- better-sqlite3 declara
 # "engines": {"node": ">=22"}; con Node 20 el binario nativo compila

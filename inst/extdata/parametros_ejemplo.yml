@@ -1,19 +1,11 @@
 # =============================================================================
 # parametros_ejemplo.yml
 #
-# Archivo de parametros para el paquete balancehidrico (metodo propio CRC-SAS,
-# ver docs/documento_maestro_fenologia_balance_hidrico.md y docs/v2/).
-#
-# Todos los valores numericos de la seccion `cultivos` fueron tomados
-# directamente de la hoja `cultivo` de docs/v2/Calculos fenologia y balance
-# hidrico.xlsx (ya verificados contra las respuestas del experto a la
-# Seccion 2A: F-1 a F-7, PR-1, PR-2, KC-1, KC-2).
-#
-# Los parametros de suelo del Paso 4 (Balance hidrico diario: CN, kl, Um, U,
-# DR y horizontes) se agregaron en la seccion `suelos` para el suelo
-# IN64MARC02 (ver mas abajo). Las constantes categoricas de rastrojo y
-# humedad inicial (fijas, no varian por escenario) NO estan aca -- ver
-# `inst/extdata/constantes.yml`.
+# Archivo de parametros para el paquete balancehidrico (metodo CRC-SAS).
+# Tiene tres secciones: `estaciones`, `suelos` y `cultivos`. Las constantes
+# categoricas de rastrojo y humedad inicial (fijas, no varian por escenario)
+# NO estan aca -- ver `inst/extdata/constantes.yml`. El significado de cada
+# parametro esta en documentacion/MANUAL_TECNICO.md.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -27,25 +19,14 @@ estaciones:
 
 # -----------------------------------------------------------------------------
 # suelos: `profundidad_maxima_m` es lo unico que necesita el Paso 2
-# (Profundizacion radicular) para topear el crecimiento radicular potencial
-# (regla del documento: "hasta la prof. maxima del suelo o el cuaje de granos,
-# lo que ocurra primero" -- ver duda PR-1). RC00000001 solo tiene ese dato
-# (no hay datos de Paso 4 para ese suelo).
+# (Profundizacion radicular) para topear el crecimiento radicular potencial.
+# RC00000001 solo tiene ese dato (no sirve para el balance hidrico, Paso 4).
 #
-# IN64MARC02 ademas trae los campos que necesita el Paso 4 (Balance hidrico
-# diario): escalares de suelo (cn, kl, um, u, dr) y 8 horizontes (nombre,
-# pfh_m, pmp, cc, sat). Es el suelo real del fixture de la hoja
-# `balance hídrico` de documentacion/referencias/v3/Calculos fenologia y
-# balance hidrico.xlsx (filas 4-12; Marcos Juarez, Haplustol udico). `pfh_m`
-# ya esta en metros en la fuente v3 (el experto lo corrigio de cm a m).
-#
-# NOTA: el catalogo `suelos` del xlsx (hoja `suelos`, fila 105) para
-# IN64MARC02 solo tiene 7 horizontes (0.2/0.4/0.6/0.9/1.2/1.8/2.1m, sin
-# 1.5m). El fixture de `balance hídrico` usa 8 horizontes, duplicando la
-# ultima fila del catalogo (C2, PMP=0.11/CC=0.25/Sat=0.47) en el horizonte
-# de 1.5m. Se preserva tal cual aparece en el fixture (discrepancia del
-# xlsx, no un error de transcripcion nuestro) para reproducir los valores
-# cacheados exactamente.
+# IN64MARC02 (Marcos Juarez, Haplustol udico) ademas trae los campos que
+# necesita el Paso 4 (Balance hidrico diario): escalares de suelo (cn, kl,
+# um, u, dr) y 8 horizontes (nombre, pfh_m, pmp, cc, sat). `pfh_m` es la
+# profundidad inferior de cada horizonte, en metros; pmp/cc/sat son
+# contenidos volumetricos (fraccion 0-1).
 # -----------------------------------------------------------------------------
 suelos:
   RC00000001:
@@ -64,7 +45,7 @@ suelos:
       - {nombre: B22t, pfh_m: 0.6, pmp: 0.18, cc: 0.32, sat: 0.45}
       - {nombre: B3,   pfh_m: 0.9, pmp: 0.15, cc: 0.29, sat: 0.45}
       - {nombre: C1,   pfh_m: 1.2, pmp: 0.14, cc: 0.28, sat: 0.45}
-      - {nombre: C2,   pfh_m: 1.5, pmp: 0.11, cc: 0.25, sat: 0.47}  # ver nota arriba
+      - {nombre: C2,   pfh_m: 1.5, pmp: 0.11, cc: 0.25, sat: 0.47}
       - {nombre: C2,   pfh_m: 1.8, pmp: 0.11, cc: 0.25, sat: 0.47}
       - {nombre: C2,   pfh_m: 2.1, pmp: 0.11, cc: 0.25, sat: 0.47}
 
@@ -91,7 +72,7 @@ cultivos:
     ut_e_ikcbmax: 1000    # UT Emergencia -> inicio Kcb maximo
     ut_e_et: 400          # UT Emergencia -> Espiguilla Terminal (hito1), ajustado por Fp y RCF del cultivar
     ut_et_ipc: 100        # UT ET -> inicio periodo critico
-    ut_et_z71: 700        # UT ET -> Z71 (cuaje de granos, hito2). Z71 != fPC (ver duda F-1)
+    ut_et_z71: 700        # UT ET -> Z71 (cuaje de granos, hito2). Z71 != fPC
     ut_et_fpc: 800        # UT ET -> fin periodo critico (fPC = ET + 800, distinto de Z71 = ET + 700)
     ut_fpc_mf: 400        # UT fin periodo critico -> madurez fisiologica (MF = fPC + 400)
     raiz:
@@ -100,7 +81,7 @@ cultivos:
       tb_c: 0              # temperatura base para el crecimiento radicular (°C)
     kcb:
       kcb_ini: 0.15        # Kcb inicial (constante desde E hasta fin Kcb inicial)
-      kcb_max: 1.10         # Kcb maximo (constante desde inicio Kcb maximo hasta MF; no declina -- ver duda KC-1)
+      kcb_max: 1.10         # Kcb maximo (constante desde inicio Kcb maximo hasta MF; no declina)
     cultivares:
       # RCF: respuesta del cultivar al fotoperiodo (mayor RCF = menor
       # acumulacion diaria de UT con Fp bajo = ciclo E->ET mas largo)
@@ -163,7 +144,7 @@ cultivos:
     ut_e_fkcbini: 180        # UT Emergencia -> fin Kcb inicial
     ut_e_ikcbmax: 840        # UT Emergencia -> inicio Kcb maximo
     ut_e_r1: 400             # UT Emergencia -> R1 (hito1), ajustado por Fp si Fp > fpu_e_r1
-    ut_r1_r5: 300            # UT R1 -> R5 (cuaje de granos, hito2). Siempre 300 (ver duda F-3)
+    ut_r1_r5: 300            # UT R1 -> R5 (cuaje de granos, hito2). Siempre 300
     ut_r1_ipc: 120           # UT R1 -> inicio periodo critico (iPC = R1 + 120)
     ut_r5_fpc: 200           # UT R5 -> fin periodo critico (fPC = R5 + 200)
     ut_r5_mf: 800            # UT R5 -> madurez fisiologica (MF = R5 + 800)

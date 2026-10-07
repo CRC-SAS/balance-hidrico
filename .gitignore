@@ -52,12 +52,12 @@ rsconnect/
 /salidas/
 /salidas_batch/
 
-# Documentos de trabajo temporales de CRC-SAS (fuente de MANUAL_TECNICO.md,
-# nunca se suben al repo -- se conservan solo localmente)
+# Documentos de trabajo temporales de CRC-SAS: nunca se suben al repo, se
+# conservan solo localmente
 /documentacion/referencias/
 
-# Dispositivo grafico nulo que crea Rscript al correr codigo de ggplot2/grid
-# fuera de una sesion interactiva (p.ej. documentacion/figuras/generar_figuras.R)
+# Dispositivo grafico nulo que crea Rscript al correr codigo de graficos
+# fuera de una sesion interactiva
 /Rplots.pdf
 
 # Catalogo fuente de la plataforma (estaciones/clima/suelos/horizontes/
