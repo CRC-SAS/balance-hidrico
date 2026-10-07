@@ -3,10 +3,9 @@
 #
 # Valores categoricos fijos del metodo CRC-SAS que NO varian entre
 # escenarios (a diferencia de parametros_ejemplo.yml, que es catalogo/datos
-# de escenario: estaciones, suelos, cultivos). Fuente: documentacion/
-# referencias/v3/Calculos fenologia y balance hidrico.xlsx, hoja
-# `balance hídrico`, filas 14-18 (tabla "Cantidad Rastrojo" / "Humedad"),
-# confirmado por el experto de CRC-SAS el 2026-08-01.
+# de escenario: estaciones, suelos, cultivos). Se usan por defecto en
+# leer_constantes_yaml(); el escenario elige una clase de cada tabla por su
+# NOMBRE (Baja, Moderada, Muy_Alta; Se, mS, mH, Hu).
 # =============================================================================
 
 # Factor de reduccion de la evaporacion/demanda evaporativa de suelo por
