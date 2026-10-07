@@ -7,9 +7,9 @@
 # climas sinteticos de maiz/soja en Pasos 1 y 3, ver FUTURE_WORK.md).
 # -----------------------------------------------------------------------------
 
-.clima_sintetico <- function(semilla_datos = 42) {
+.clima_sintetico <- function(semilla_datos = 42, n_anios = 6) {
   set.seed(semilla_datos)
-  n <- 365 * 6
+  n <- 365 * n_anios
   fecha <- seq(as.Date("2000-01-01"), by = "day", length.out = n)
   doy <- as.numeric(format(fecha, "%j"))
 
@@ -149,6 +149,65 @@ test_that("completar_gaps_clima es reproducible con la misma semilla y distinto 
   expect_identical(r1$pp[1500], r2$pp[1500])
 
   expect_false(isTRUE(all.equal(r1$tn[500], r3$tn[500])))
+})
+
+test_that("completar_gaps_clima preserva el 29 de febrero cuando tiene dato real", {
+  clima <- .clima_sintetico()
+  idx_29feb <- which(format(clima$date, "%m-%d") == "02-29")
+  expect_true(length(idx_29feb) >= 2)
+  original <- clima[idx_29feb, c("tx", "tn", "tm")]
+
+  clima$tn[500] <- NA
+  relleno <- completar_gaps_clima(clima, semilla = 123)
+
+  expect_equal(relleno[idx_29feb, c("tx", "tn", "tm")], original)
+})
+
+test_that("completar_gaps_clima interpola el 29 de febrero cuando falta, sin pasar por STL/AR1", {
+  clima <- .clima_sintetico()
+  idx <- which(format(clima$date, "%m-%d") == "02-29")[1]
+  clima$tx[idx] <- NA
+  clima$tn[idx] <- NA
+  clima$tm[idx] <- NA
+
+  relleno <- completar_gaps_clima(clima, semilla = 123)
+
+  expect_equal(relleno$tx[idx], (relleno$tx[idx - 1] + relleno$tx[idx + 1]) / 2)
+  expect_equal(relleno$tn[idx], (relleno$tn[idx - 1] + relleno$tn[idx + 1]) / 2)
+  expect_equal(relleno$tm[idx], (relleno$tx[idx] + relleno$tn[idx]) / 2)
+})
+
+test_that("completar_gaps_clima no corre de fase el componente estacional en series largas con bisiestos", {
+  # Regresion del bug de n.p=365 sin excluir el 29-feb: en una serie de
+  # 40 anios (10 bisiestos), sin la correccion el pico/valle estacional
+  # se corre ~1 dia cada 4 anios -- confirmado con datos reales (~6 dias
+  # de corrimiento sobre 40 anios). Este test usa la serie sintetica
+  # (estacionalidad conocida, generada con el doy REAL de cada fecha) y
+  # pone un hueco cerca del final de la serie (maxima deriva acumulada
+  # posible) justo en el punto de pendiente mas empinada de la sinusoide
+  # -- ahi un corrimiento de fase de varios dias se traduce en un sesgo
+  # sistematico de >1 grado, facil de distinguir del ruido de muestreo.
+  clima <- .clima_sintetico(n_anios = 40)
+  ini <- which(clima$date == as.Date("2036-09-19"))
+  fin <- ini + 13L
+  clima$tx[ini:fin] <- NA
+
+  doy_real <- clima$doy[ini:fin]
+  esperado <- 22 + 8 * sin(2 * pi * (doy_real - 80) / 365)
+
+  # Promediar sobre varias semillas cancela el ruido AR(1) (media
+  # condicional ~0 lejos de los bordes del hueco) y aisla un eventual
+  # sesgo sistematico de fase.
+  promedios <- vapply(1:30, function(s) {
+    completar_gaps_clima(clima, semilla = s)$tx[ini:fin]
+  }, numeric(length(ini:fin)))
+  tx_promedio <- rowMeans(promedios)
+
+  expect_true(
+    mean(abs(tx_promedio - esperado)) < 1,
+    info = sprintf("diferencia media = %.2f (deberia ser < 1 sin corrimiento de fase)",
+                   mean(abs(tx_promedio - esperado)))
+  )
 })
 
 test_that("completar_gaps_clima da valores fisicamente plausibles (dentro de un rango amplio de la estacionalidad)", {

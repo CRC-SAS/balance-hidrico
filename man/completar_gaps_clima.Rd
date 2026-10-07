@@ -48,4 +48,16 @@ condicional a que llueva via una distribucion gamma.
 Esta funcion siembra el generador aleatorio (\code{set.seed(semilla)}) al
 principio para que el resultado sea reproducible -- efecto de lado
 sobre el estado global de \code{.Random.seed}, documentado aca a proposito.
+
+\strong{29 de febrero}: se excluye de la descomposicion STL (\code{n.p = 365}
+en \code{.rellenar_serie_continua()} necesita un ciclo de exactamente 365
+dias; dejar el 29-feb adentro corre de fase el componente estacional
+~1 dia cada 4 anios -- confirmado con datos reales: ~6 dias de
+corrimiento del pico estacional entre el principio y el final de una
+serie de 40 anios). Se recompone al final: si el 29-feb tenia dato
+real, se preserva tal cual (nunca pasa por el modelo); si faltaba, se
+interpola linealmente entre el 28-feb y el 1-mar ya rellenos (ver
+\code{.completar_29feb()}) -- una simplificacion deliberada (no pasa por
+STL/AR1/Markov) que se considera aceptable porque es como maximo 1
+dia cada 4 anios.
 }

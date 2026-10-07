@@ -52,9 +52,10 @@
 # tx-tn) via stlplus (tendencia + estacionalidad, tolera NA) + bridge
 # AR(1) sobre el residuo, con la varianza de innovacion escalada por
 # trimestre del anio (no una sola varianza global -- la variabilidad dia
-# a dia no es constante en el anio). n.p = 365 (aproximacion; no corrige
-# el corrimiento de fase de ~1 dia cada 4 anios por bisiestos --
-# irrelevante para huecos de pocos dias).
+# a dia no es constante en el anio). n.p = 365 -- el llamador
+# (completar_gaps_clima()) ya saco el 29 de febrero de `valor` antes de
+# esta funcion, asi que ese "365" es un ciclo exacto, no una
+# aproximacion (ver nota en completar_gaps_clima()).
 .rellenar_serie_continua <- function(valor, quarter, corridas) {
   fit <- stlplus::stlplus(valor, n.p = 365, s.window = "periodic")
   estacional <- fit$data$seasonal
@@ -202,6 +203,18 @@
 #' principio para que el resultado sea reproducible -- efecto de lado
 #' sobre el estado global de `.Random.seed`, documentado aca a proposito.
 #'
+#' **29 de febrero**: se excluye de la descomposicion STL (`n.p = 365`
+#' en `.rellenar_serie_continua()` necesita un ciclo de exactamente 365
+#' dias; dejar el 29-feb adentro corre de fase el componente estacional
+#' ~1 dia cada 4 anios -- confirmado con datos reales: ~6 dias de
+#' corrimiento del pico estacional entre el principio y el final de una
+#' serie de 40 anios). Se recompone al final: si el 29-feb tenia dato
+#' real, se preserva tal cual (nunca pasa por el modelo); si faltaba, se
+#' interpola linealmente entre el 28-feb y el 1-mar ya rellenos (ver
+#' `.completar_29feb()`) -- una simplificacion deliberada (no pasa por
+#' STL/AR1/Markov) que se considera aceptable porque es como maximo 1
+#' dia cada 4 anios.
+#'
 #' @param clima Tibble de una sola estacion, misma forma que devuelve
 #'   [leer_clima_csv()] (`station_id`, `date`, `doy`, `tx`, `tn`, `tm`,
 #'   `pp`, `eto`). `date` debe ser una secuencia diaria completa y
@@ -224,17 +237,44 @@ completar_gaps_clima <- function(clima, semilla = 1234) {
 
   set.seed(semilla)
 
-  quarter <- lubridate::quarter(clima$date)
+  es_29feb <- format(clima$date, "%m-%d") == "02-29"
+  sub <- clima[!es_29feb, ]
 
-  temperaturas <- .rellenar_temperaturas(clima$tx, clima$tn, clima$tm, quarter)
-  clima$tx <- temperaturas$tx
-  clima$tn <- temperaturas$tn
-  clima$tm <- temperaturas$tm
+  quarter <- lubridate::quarter(sub$date)
 
-  corridas_pp <- .identificar_corridas_na(clima$pp)
+  temperaturas <- .rellenar_temperaturas(sub$tx, sub$tn, sub$tm, quarter)
+  sub$tx <- temperaturas$tx
+  sub$tn <- temperaturas$tn
+  sub$tm <- temperaturas$tm
+
+  corridas_pp <- .identificar_corridas_na(sub$pp)
   if (nrow(corridas_pp) > 0) {
-    clima$pp <- .rellenar_precipitacion(clima$pp, corridas_pp)
+    sub$pp <- .rellenar_precipitacion(sub$pp, corridas_pp)
   }
 
+  clima$tx[!es_29feb] <- sub$tx
+  clima$tn[!es_29feb] <- sub$tn
+  clima$tm[!es_29feb] <- sub$tm
+  clima$pp[!es_29feb] <- sub$pp
+
+  .completar_29feb(clima, es_29feb)
+}
+
+# 29 de febrero, excluido del modelo STL/AR1/Markov de arriba (ver nota en
+# completar_gaps_clima()): si tenia dato real no se toca (ya esta intacto,
+# nunca se sobreescribio); si faltaba, se interpola linealmente entre el
+# 28-feb y el 1-mar (columnas adyacentes, ya rellenas en este punto) --
+# si alguno de los dos sigue en NA (hueco de borde de la serie), el
+# promedio da NA y el 29-feb queda igual de intacto, mismo criterio que
+# el resto de la serie. `tm` se re-deriva con calcular_temperatura_media()
+# (formula exacta, ya usada en el resto del paquete).
+.completar_29feb <- function(clima, es_29feb) {
+  for (i in which(es_29feb)) {
+    if (i <= 1 || i >= nrow(clima)) next
+    if (is.na(clima$tx[i])) clima$tx[i] <- mean(c(clima$tx[i - 1], clima$tx[i + 1]))
+    if (is.na(clima$tn[i])) clima$tn[i] <- mean(c(clima$tn[i - 1], clima$tn[i + 1]))
+    if (is.na(clima$pp[i])) clima$pp[i] <- mean(c(clima$pp[i - 1], clima$pp[i + 1]))
+    clima$tm[i] <- calcular_temperatura_media(clima$tx[i], clima$tn[i], clima$tm[i])
+  }
   clima
 }

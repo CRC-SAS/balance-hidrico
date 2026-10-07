@@ -12,9 +12,16 @@
 # misma semilla en cada corrida (`--semilla`, default 1234) da siempre la
 # misma SQLite.
 #
+# `--clima <csv>` es opcional: si se pasa, el clima sale de ese CSV
+# (columnas omm_id,date,tmax,tmin,tmed,prcp -- mismo formato que manda
+# CRC-SAS como "observations.csv") en vez de la hoja "clima" del xlsx.
+# Pensado para actualizar el clima (series mas largas, nuevas
+# observaciones) sin tener que tocar el resto del catalogo cada vez.
+#
 # Uso (desde la raiz del repo):
-#   Rscript scripts/construir_base_datos.R <catalogo.xlsx> <salida.sqlite> [--semilla N]
+#   Rscript scripts/construir_base_datos.R <catalogo.xlsx> <salida.sqlite> [--semilla N] [--clima <clima.csv>]
 #   Rscript scripts/construir_base_datos.R base_datos_balance_hidrico.xlsx balance_hidrico.sqlite
+#   Rscript scripts/construir_base_datos.R base_datos_balance_hidrico.xlsx balance_hidrico.sqlite --clima observations.csv
 
 suppressPackageStartupMessages({
   if (requireNamespace("devtools", quietly = TRUE)) {
@@ -32,19 +39,25 @@ source("scripts/lib_simular.R")
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 2) {
   rlang::abort(paste(
-    "Uso: Rscript scripts/construir_base_datos.R <catalogo.xlsx> <salida.sqlite> [--semilla N]"
+    "Uso: Rscript scripts/construir_base_datos.R <catalogo.xlsx> <salida.sqlite>",
+    "[--semilla N] [--clima <clima.csv>]"
   ))
 }
 ruta_xlsx <- args[1]
 ruta_sqlite <- args[2]
 semilla_idx <- which(args == "--semilla")
 semilla_imputacion <- if (length(semilla_idx) == 1) as.integer(args[semilla_idx + 1]) else 1234L
+clima_idx <- which(args == "--clima")
+ruta_clima_csv <- if (length(clima_idx) == 1) args[clima_idx + 1] else NULL
 
 if (!file.exists(ruta_xlsx)) {
   rlang::abort(sprintf("No existe el archivo de catalogo '%s'", ruta_xlsx))
 }
+if (!is.null(ruta_clima_csv) && !file.exists(ruta_clima_csv)) {
+  rlang::abort(sprintf("No existe el archivo de clima '%s'", ruta_clima_csv))
+}
 
-# --- 1) Leer las 5 solapas del xlsx ------------------------------------------
+# --- 1) Leer las 5 solapas del xlsx (clima solo si no vino --clima) ---------
 
 cat(sprintf("Leyendo '%s'...\n", ruta_xlsx))
 
@@ -52,7 +65,21 @@ estaciones <- readxl::read_excel(ruta_xlsx, sheet = "estaciones")
 suelos <- readxl::read_excel(ruta_xlsx, sheet = "suelos")
 horizontes <- readxl::read_excel(ruta_xlsx, sheet = "horizontes")
 cultivares <- readxl::read_excel(ruta_xlsx, sheet = "cultivares")
-clima_raw <- readxl::read_excel(ruta_xlsx, sheet = "clima")
+
+# El clima es el dato que mas seguido se actualiza (nuevas observaciones,
+# series mas largas) -- separado del resto del catalogo (estaciones/
+# suelos/horizontes/cultivares, que cambian poco) para no tener que tocar
+# el xlsx cada vez que llega una serie nueva. Mismas columnas en los dos
+# casos (omm_id, fecha/date, tmax, tmin, tmed, prcp), solo cambia el
+# nombre de la columna de fecha entre la hoja del xlsx ("fecha") y el CSV
+# de observaciones tal cual lo manda CRC-SAS ("date").
+if (!is.null(ruta_clima_csv)) {
+  cat(sprintf("Leyendo clima desde '%s' (--clima)...\n", ruta_clima_csv))
+  clima_raw <- readr::read_csv(ruta_clima_csv, show_col_types = FALSE)
+  clima_raw$fecha <- clima_raw$date
+} else {
+  clima_raw <- readxl::read_excel(ruta_xlsx, sheet = "clima")
+}
 
 # --- 2) Armar tabla `clima`: gaps rellenados + eto, todas las estaciones ----
 
