@@ -1,4 +1,4 @@
-# balancehidrico
+# Balance hídrico de cultivos — CRC-SAS
 
 Herramienta de **balance hídrico de cultivos** de CRC-SAS (Centro Regional de
 Cambio Climático y Ayuda a la Toma de Decisiones). Implementa el método propio
