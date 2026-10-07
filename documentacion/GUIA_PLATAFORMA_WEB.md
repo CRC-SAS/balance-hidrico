@@ -17,7 +17,7 @@ cultivo de trigo, maíz o soja.
    - [Mac](#32-mac)
    - [Comprobar que Docker funciona](#33-comprobar-que-docker-funciona)
 4. [Preparar la plataforma](#4-preparar-la-plataforma)
-5. [Iniciar la plataforma](#5-iniciar-la-plataforma)
+5. [Instalar la plataforma (un solo comando, una sola vez)](#5-instalar-la-plataforma-un-solo-comando-una-sola-vez)
 6. [Usar la plataforma](#6-usar-la-plataforma)
 7. [Detener, reiniciar y actualizar](#7-detener-reiniciar-y-actualizar)
 8. [Problemas frecuentes](#8-problemas-frecuentes)
@@ -41,10 +41,15 @@ sabe abrir esas cajas se llama **Docker**.
 
 Entonces el proceso es:
 
-1. Instalás **Docker** (una sola vez).
+1. Instalás **Docker Desktop** (una sola vez): una aplicación con ventanas y
+   botones, que incluye el motor de Docker.
 2. Bajás un archivo de texto muy chico, `docker-compose.yml`, que le dice a
    Docker cómo levantar los dos programas juntos.
-3. Escribís un comando y abrís el navegador.
+3. Copiás y pegás **un solo comando** (una única vez) para descargar los
+   programas.
+4. Desde ahí, todo se maneja con los **botones de Docker Desktop**: iniciar,
+   detener, abrir la plataforma y ver mensajes de error. No hace falta volver
+   a escribir comandos.
 
 No se instala nada más en tu computadora, y se puede borrar todo sin dejar
 rastros (sección 9).
@@ -135,40 +140,21 @@ Apple M1/M2/M3…** es *Apple Silicon*; si dice **Procesador: Intel…** es
 
 ### 3.3 Comprobar que Docker funciona
 
-Vamos a usar la **terminal**, una ventana donde se escriben comandos.
+No hace falta usar comandos para esto: mirá la ventana de **Docker Desktop**.
 
-- **Windows:** abrí el menú Inicio, escribí **PowerShell** y abrí
-  **Windows PowerShell**.
-- **Mac:** abrí **Terminal** (Cmd + Espacio, escribí *Terminal*).
+- Abajo a la izquierda tiene que verse el ícono de la ballena en **verde** con
+  el texto **Engine running**.
+- En el menú de la izquierda ves las secciones **Containers**, **Images**,
+  etc. Son las que vamos a usar.
 
-Escribí este comando y apretá **Enter**:
+Si dice *starting* o el ícono está en naranja, esperá un minuto. Si no
+arranca, ver [problemas frecuentes](#8-problemas-frecuentes).
 
-```bash
-docker --version
-```
-
-Tiene que responder algo como `Docker version 27.x.x, build …` (el número puede
-ser distinto). Después:
-
-```bash
-docker compose version
-```
-
-Tiene que responder algo como `Docker Compose version v2.x.x`.
-
-Si los dos comandos responden con un número de versión, Docker está listo. Si
-dicen *"no se reconoce el comando"* o *"command not found"*, cerrá y volvé a
-abrir la terminal; si sigue igual, comprobá que Docker Desktop esté abierto
-(ver [problemas frecuentes](#8-problemas-frecuentes)).
-
-**Prueba opcional** (comprueba que Docker puede descargar y ejecutar
-programas):
-
-```bash
-docker run hello-world
-```
-
-Si aparece un mensaje que empieza con *"Hello from Docker!"*, todo funciona.
+**Recomendado: que Docker se abra solo.** En Docker Desktop, hacé clic en el
+engranaje (**Settings**) → **General** y dejá tildada la opción **Start Docker
+Desktop when you sign in to your computer** (*Iniciar Docker Desktop al iniciar
+sesión*). Así, cuando prendas la computadora, la plataforma vuelve a estar
+disponible sin hacer nada.
 
 ## 4. Preparar la plataforma
 
@@ -219,65 +205,52 @@ services:
 motor de cálculo) y `frontend` (la página web). Le pide a Docker que descargue
 las dos imágenes publicadas por CRC-SAS, que publique la página en el puerto
 **3000** de tu computadora y que mantenga el motor de cálculo accesible solo
-para la página (por eso no se puede entrar al motor directamente desde el
-navegador). `restart: unless-stopped` hace que se reinicien solos si tu
+para la página. `restart: unless-stopped` hace que se reinicien solos si tu
 computadora se reinicia, salvo que los hayas detenido vos.
 
-**3. Abrí la terminal dentro de esa carpeta:**
+## 5. Instalar la plataforma (un solo comando, una sola vez)
+
+La descarga inicial de los dos programas es el **único paso que requiere
+escribir un comando**: copiás y pegás una línea. De ahí en adelante, todo se
+maneja con botones desde Docker Desktop.
+
+**1. Abrí una terminal dentro de la carpeta** donde guardaste
+`docker-compose.yml`:
 
 - **Windows:** en el Explorador de archivos, entrá a la carpeta, hacé clic en
-  la barra de dirección, escribí `powershell` y apretá Enter.
-- **Mac:** abrí Terminal y escribí `cd ` (con un espacio al final), arrastrá la
-  carpeta desde el Finder hasta la ventana de Terminal y apretá Enter.
+  la barra de dirección (donde dice la ruta), escribí `powershell` y apretá
+  Enter. Se abre una ventana azul o negra.
+- **Mac:** abrí **Terminal** (`Cmd + Espacio`, escribí *Terminal*), escribí
+  `cd ` (con un espacio al final), arrastrá la carpeta desde el Finder hasta la
+  ventana de Terminal y apretá Enter.
 
-Comprobá que estás en el lugar correcto:
-
-```bash
-docker compose config --quiet
-```
-
-Si no muestra ningún mensaje de error, el archivo está bien.
-
-## 5. Iniciar la plataforma
-
-Con la terminal abierta en la carpeta y **Docker Desktop abierto**, escribí:
+**2. Copiá, pegá y apretá Enter** (con **Docker Desktop abierto**):
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
-**La primera vez** Docker descarga los dos programas de internet. Vas a ver
-barras de progreso y puede tardar **varios minutos**, según tu conexión. Es
-normal. Las próximas veces arranca en segundos porque ya está todo descargado.
+**La primera vez** Docker descarga los dos programas de internet (en total
+poco más de 1 GB). Vas a ver barras de progreso y puede tardar **varios
+minutos**, según tu conexión. Es normal. Cuando termine, vas a ver líneas con
+la palabra **Started** o **Healthy** y vas a poder cerrar la terminal: no la
+necesitás más.
 
-La plataforma está **lista** cuando en la terminal aparece una línea como:
+**3. Mirá Docker Desktop.** En la sección **Containers** (menú de la izquierda)
+aparece un grupo con el nombre de tu carpeta (por ejemplo `balance-hidrico`) que
+contiene dos elementos: **api** y **frontend**, ambos con un punto **verde** y
+el estado **Running**.
 
-```
-frontend-1  | ✓ Ready in ...
-```
-
-y otra como:
-
-```
-api-1  | Running plumber API at http://0.0.0.0:8000
-```
-
-Entonces **abrí tu navegador** (Chrome, Edge, Firefox, Safari) y entrá a:
+**4. Abrí la plataforma.** En la fila del `frontend`, en la columna **Port(s)**,
+hacé clic en el enlace **3000:3000**: se abre el navegador en la plataforma.
+También podés abrir el navegador y escribir
 
 > **<http://localhost:3000>**
 
 Tendría que aparecer el formulario *"Elegir localidad…"*.
 
-> **No cierres la terminal** mientras uses la plataforma: en este modo, cerrar
-> la ventana detiene los programas. Si preferís que funcione "de fondo" sin
-> tener la terminal abierta, usá en cambio:
->
-> ```bash
-> docker compose up -d
-> ```
->
-> La `-d` significa *detached* (desacoplado). Podés cerrar la terminal y la
-> plataforma sigue funcionando.
+> Podés guardar `http://localhost:3000` como favorito del navegador: es la
+> dirección que vas a usar siempre.
 
 ## 6. Usar la plataforma
 
@@ -371,22 +344,26 @@ en **Correr simulación**.
 
 ## 7. Detener, reiniciar y actualizar
 
-Todos estos comandos se escriben en la terminal, **dentro de la carpeta** donde
-está el archivo `docker-compose.yml`.
+Todo se hace desde **Docker Desktop → Containers**, con los botones de la fila
+del grupo (por ejemplo `balance-hidrico`). Al usar los botones del grupo, se
+aplican a los dos programas a la vez.
 
-| Quiero… | Comando |
+| Quiero… | Qué hacer en Docker Desktop |
 |---|---|
-| **Detener** la plataforma | `docker compose down` (o `Ctrl + C` si la iniciaste sin `-d`) |
-| **Volver a iniciarla** | `docker compose up` (o `docker compose up -d` para que quede de fondo) |
-| **Ver si está funcionando** | `docker compose ps` |
-| **Ver los mensajes** (para diagnosticar un problema) | `docker compose logs` |
-| **Actualizar** a la última versión publicada | `docker compose pull` y después `docker compose up -d` |
+| **Detener** la plataforma | Botón **■ Stop** del grupo |
+| **Volver a iniciarla** | Botón **▶ Start** del grupo, y esperar a que los dos digan *Running* |
+| **Abrirla** | Enlace **3000:3000** del `frontend` (o <http://localhost:3000>) |
+| **Ver los mensajes** (para diagnosticar un problema) | Hacer clic en el nombre del contenedor (`api` o `frontend`) → pestaña **Logs** |
+| **Reiniciarla** si algo no responde | Botón **Restart** (↻) del grupo |
 
-También podés iniciar y detener los programas con el botón **▶ / ■** en la
-pestaña **Containers** de Docker Desktop, sin usar la terminal.
+> **Si apagás la computadora:** la plataforma se reinicia sola cuando vuelva a
+> abrirse Docker Desktop, salvo que la hayas detenido vos con **Stop**.
 
-**Actualizar.** Cuando CRC-SAS publica una versión nueva (por ejemplo, con
-datos de clima más recientes), tu copia no cambia sola. Para tener la última:
+**Actualizar a la última versión.** Cuando CRC-SAS publica una versión nueva
+(por ejemplo, con datos de clima más recientes), tu copia no cambia sola. Para
+actualizarla hay que volver a descargar los programas, con otro comando de una
+línea. Abrí la terminal en la carpeta (como en la sección 5) y ejecutá estas
+dos líneas, una después de la otra:
 
 ```bash
 docker compose pull
@@ -395,10 +372,14 @@ docker compose up -d
 
 ## 8. Problemas frecuentes
 
-**"Cannot connect to the Docker daemon" / "error during connect" /
-"docker: command not found".**
-Docker Desktop no está abierto o todavía está arrancando. Abrilo y esperá a que
-diga **Engine running**. Después probá de nuevo.
+**Docker Desktop dice "Engine starting" mucho tiempo, o no abre.**
+Esperá unos minutos la primera vez. Si sigue igual, cerralo por completo y
+volvelo a abrir; si persiste, reiniciá la computadora.
+
+**La terminal dice "Cannot connect to the Docker daemon", "error during
+connect" o "docker: command not found".**
+Docker Desktop no está abierto o todavía está arrancando. Abrilo y esperá a
+que diga **Engine running**. Después volvé a ejecutar el comando.
 
 **Windows: Docker Desktop dice que la virtualización está deshabilitada, o
 que WSL 2 no está instalado.**
@@ -416,29 +397,32 @@ Es solo un aviso: las imágenes están hechas para procesadores Intel/AMD y
 Docker las ejecuta en modo compatibilidad. Si realmente no arranca, activá la
 opción de Rosetta descripta en la sección [3.2](#32-mac).
 
-**"port is already allocated" / "Bind for 0.0.0.0:3000 failed".**
+**En Docker Desktop, el `frontend` o el `api` aparece en rojo / *Exited*, o
+al iniciar dice "port is already allocated" / "Bind for 0.0.0.0:3000
+failed".**
 Otro programa de tu computadora ya está usando el puerto 3000. Cerralo, o
 cambiá el puerto de la plataforma: en `docker-compose.yml`, reemplazá
-`"3000:3000"` por `"3001:3000"`, volvé a iniciar con `docker compose up` y
-entrá a <http://localhost:3001>.
+`"3000:3000"` por `"3001:3000"`, ejecutá otra vez `docker compose up -d` (sección
+5) y entrá a <http://localhost:3001>.
 
 **El navegador dice "No se puede acceder a este sitio" en `localhost:3000`.**
-Comprobá en la terminal con `docker compose ps` que los dos servicios figuren
-como *running* / *Up*. Si recién iniciaste la plataforma, esperá unos segundos
-a que aparezca la línea `✓ Ready` en la terminal.
+Entrá a Docker Desktop → **Containers** y comprobá que el `frontend` y el
+`api` estén en **Running**. Si alguno no lo está, apretá **Start** en el grupo.
+Si recién los iniciaste, esperá unos segundos.
 
 **La página carga pero al simular aparece "No se pudo conectar con el
 servicio de simulación".**
-El motor de cálculo (`api`) todavía está arrancando o se detuvo. Esperá medio
-minuto y volvé a intentar; si persiste, mirá los mensajes con
-`docker compose logs api`.
+El motor de cálculo (`api`) todavía está arrancando o se detuvo. En
+**Containers**, verificá que `api` esté en **Running**, esperá medio minuto y
+volvé a intentar. Si persiste, hacé clic en `api` → **Logs** para ver los
+mensajes.
 
 **Aparece "N año(s) no se pudieron simular".**
 Para esos años, la ventana de simulación pedida se sale del rango de clima
 disponible (por ejemplo, un monitoreo en el año anterior al primer año de la
 serie). Los demás años se calculan y resumen normalmente.
 
-**Al descargar (`docker compose pull` o `up`) aparece "denied" o "unauthorized".**
+**Al ejecutar `docker compose up -d` aparece "denied" o "unauthorized".**
 Verificá que el nombre de las imágenes en `docker-compose.yml` sea exactamente
 `ghcr.io/crc-sas/balance-hidrico-api:latest` y
 `ghcr.io/crc-sas/balance-hidrico-frontend:latest`, y que tengas conexión a
@@ -446,19 +430,16 @@ internet.
 
 ## 9. Desinstalar
 
-Para detener la plataforma y borrar sus contenedores:
+Todo desde **Docker Desktop**:
 
-```bash
-docker compose down
-```
+1. **Containers:** en la fila del grupo (por ejemplo `balance-hidrico`), hacé
+   clic en el ícono del tacho de basura (**Delete**) y confirmá. Esto detiene y
+   borra la plataforma.
+2. **Images:** tildá las dos imágenes `ghcr.io/crc-sas/balance-hidrico-api` y
+   `ghcr.io/crc-sas/balance-hidrico-frontend` y hacé clic en **Delete** para
+   liberar el espacio en el disco.
+3. Borrá la carpeta que contiene `docker-compose.yml`.
 
-Para borrar además las imágenes descargadas (libera espacio en el disco):
-
-```bash
-docker compose down --rmi all
-```
-
-Después podés borrar la carpeta con `docker-compose.yml`. Para desinstalar
-Docker Desktop, usá el desinstalador habitual de tu sistema (Windows:
-*Configuración → Aplicaciones*; Mac: arrastrá Docker de Aplicaciones a la
-Papelera).
+Para desinstalar Docker Desktop, usá el desinstalador habitual de tu sistema
+(Windows: *Configuración → Aplicaciones*; Mac: arrastrá Docker de Aplicaciones a
+la Papelera).
