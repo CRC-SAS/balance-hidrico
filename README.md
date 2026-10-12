@@ -1,19 +1,14 @@
 # Balance hídrico de cultivos — CRC-SAS
 
-Herramienta de **balance hídrico de cultivos** de CRC-SAS (Centro Regional de
-Cambio Climático y Ayuda a la Toma de Decisiones). Implementa el método propio
-de CRC-SAS para **trigo, maíz y soja** y está disponible de dos formas: una
+Herramienta de **balance hídrico de cultivos de trigo, maíz y soja** del CRC-SAS (Centro Regional del Clima para el Sur de América del Sur). Está disponible de dos formas: una
 plataforma web para uso cotidiano y un paquete de R para uso avanzado.
 
 ## 1. Overview
 
 ### Para qué sirve
 
-Ayuda a gestionar el riesgo climático en decisiones agrícolas: dada una
-localidad, un suelo, un cultivo y una fecha de siembra, estima **cuánta agua
-habrá en el suelo a la siembra** y **cuánta agua tendrá disponible el cultivo
-durante su período crítico**, comparando contra todos los años de clima
-histórico disponibles.
+Ayuda a gestionar el riesgo climático a la hora de tomar decisiones agrícolas, utilizando información climática junto a conceptos de ecofisiología de cultivos. Definida una una
+localidad, un suelo con determinadas condiciones hídricas previas a la siembra, un cultivo y una fecha de siembra, estima **cuánta agua habrá en el suelo a la siembra** y **como será el confort hídrico del cultivo durante su período crítico**, utilizando una serie de años con clima disponibles.
 
 ### Qué se calcula
 
