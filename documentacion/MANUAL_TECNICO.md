@@ -1,9 +1,9 @@
 # Manual técnico — Método CRC-SAS de balance hídrico de cultivos
 
 Este documento es la **documentación teórica** de `balancehidrico`: describe
-todas las ecuaciones y procedimientos que usa el método para simular
+todas las ecuaciones y procedimientos utilizados para simular
 fenología, profundización radicular, coeficiente de cultivo, balance hídrico
-diario y salidas de trigo, maíz y soja, incluido el procedimiento de relleno
+diario y salidas en trigo, maíz y soja, incluido el procedimiento de relleno
 de huecos en las series climáticas.
 
 Es autocontenido: no requiere ninguna fuente externa para entender qué se
